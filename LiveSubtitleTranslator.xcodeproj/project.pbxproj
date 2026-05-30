@@ -1,0 +1,624 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		02A7C0012FC0052100B7A001 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 02A7C0002FC0052100B7A001 /* WhisperKit */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0265B0052FBE6BF600BB911A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0265AFED2FBE6BF500BB911A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0265AFF42FBE6BF500BB911A;
+			remoteInfo = LiveSubtitleTranslator;
+		};
+		0265B00F2FBE6BF600BB911A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0265AFED2FBE6BF500BB911A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0265AFF42FBE6BF500BB911A;
+			remoteInfo = LiveSubtitleTranslator;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0265AFF52FBE6BF500BB911A /* LiveSubtitleTranslator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LiveSubtitleTranslator.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0265B0042FBE6BF600BB911A /* LiveSubtitleTranslatorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiveSubtitleTranslatorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0265B00E2FBE6BF600BB911A /* LiveSubtitleTranslatorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiveSubtitleTranslatorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		0265AFF72FBE6BF500BB911A /* LiveSubtitleTranslator */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LiveSubtitleTranslator;
+			sourceTree = "<group>";
+		};
+		0265B0072FBE6BF600BB911A /* LiveSubtitleTranslatorTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LiveSubtitleTranslatorTests;
+			sourceTree = "<group>";
+		};
+		0265B0112FBE6BF600BB911A /* LiveSubtitleTranslatorUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LiveSubtitleTranslatorUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0265AFF22FBE6BF500BB911A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				02A7C0012FC0052100B7A001 /* WhisperKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0265B0012FBE6BF600BB911A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0265B00B2FBE6BF600BB911A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0265AFEC2FBE6BF500BB911A = {
+			isa = PBXGroup;
+			children = (
+				0265AFF72FBE6BF500BB911A /* LiveSubtitleTranslator */,
+				0265B0072FBE6BF600BB911A /* LiveSubtitleTranslatorTests */,
+				0265B0112FBE6BF600BB911A /* LiveSubtitleTranslatorUITests */,
+				0265AFF62FBE6BF500BB911A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0265AFF62FBE6BF500BB911A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0265AFF52FBE6BF500BB911A /* LiveSubtitleTranslator.app */,
+				0265B0042FBE6BF600BB911A /* LiveSubtitleTranslatorTests.xctest */,
+				0265B00E2FBE6BF600BB911A /* LiveSubtitleTranslatorUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0265AFF42FBE6BF500BB911A /* LiveSubtitleTranslator */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0265B0182FBE6BF600BB911A /* Build configuration list for PBXNativeTarget "LiveSubtitleTranslator" */;
+			buildPhases = (
+				0265AFF12FBE6BF500BB911A /* Sources */,
+				0265AFF22FBE6BF500BB911A /* Frameworks */,
+				0265AFF32FBE6BF500BB911A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0265AFF72FBE6BF500BB911A /* LiveSubtitleTranslator */,
+			);
+			name = LiveSubtitleTranslator;
+			packageProductDependencies = (
+				02A7C0002FC0052100B7A001 /* WhisperKit */,
+			);
+			productName = LiveSubtitleTranslator;
+			productReference = 0265AFF52FBE6BF500BB911A /* LiveSubtitleTranslator.app */;
+			productType = "com.apple.product-type.application";
+		};
+		0265B0032FBE6BF600BB911A /* LiveSubtitleTranslatorTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0265B01B2FBE6BF600BB911A /* Build configuration list for PBXNativeTarget "LiveSubtitleTranslatorTests" */;
+			buildPhases = (
+				0265B0002FBE6BF600BB911A /* Sources */,
+				0265B0012FBE6BF600BB911A /* Frameworks */,
+				0265B0022FBE6BF600BB911A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0265B0062FBE6BF600BB911A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0265B0072FBE6BF600BB911A /* LiveSubtitleTranslatorTests */,
+			);
+			name = LiveSubtitleTranslatorTests;
+			packageProductDependencies = (
+			);
+			productName = LiveSubtitleTranslatorTests;
+			productReference = 0265B0042FBE6BF600BB911A /* LiveSubtitleTranslatorTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		0265B00D2FBE6BF600BB911A /* LiveSubtitleTranslatorUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0265B01E2FBE6BF600BB911A /* Build configuration list for PBXNativeTarget "LiveSubtitleTranslatorUITests" */;
+			buildPhases = (
+				0265B00A2FBE6BF600BB911A /* Sources */,
+				0265B00B2FBE6BF600BB911A /* Frameworks */,
+				0265B00C2FBE6BF600BB911A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0265B0102FBE6BF600BB911A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0265B0112FBE6BF600BB911A /* LiveSubtitleTranslatorUITests */,
+			);
+			name = LiveSubtitleTranslatorUITests;
+			packageProductDependencies = (
+			);
+			productName = LiveSubtitleTranslatorUITests;
+			productReference = 0265B00E2FBE6BF600BB911A /* LiveSubtitleTranslatorUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0265AFED2FBE6BF500BB911A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2650;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					0265AFF42FBE6BF500BB911A = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					0265B0032FBE6BF600BB911A = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 0265AFF42FBE6BF500BB911A;
+					};
+					0265B00D2FBE6BF600BB911A = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 0265AFF42FBE6BF500BB911A;
+					};
+				};
+			};
+			buildConfigurationList = 0265AFF02FBE6BF500BB911A /* Build configuration list for PBXProject "LiveSubtitleTranslator" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 0265AFEC2FBE6BF500BB911A;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				02A7C0022FC0052100B7A001 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0265AFF62FBE6BF500BB911A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0265AFF42FBE6BF500BB911A /* LiveSubtitleTranslator */,
+				0265B0032FBE6BF600BB911A /* LiveSubtitleTranslatorTests */,
+				0265B00D2FBE6BF600BB911A /* LiveSubtitleTranslatorUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0265AFF32FBE6BF500BB911A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0265B0022FBE6BF600BB911A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0265B00C2FBE6BF600BB911A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0265AFF12FBE6BF500BB911A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0265B0002FBE6BF600BB911A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0265B00A2FBE6BF600BB911A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0265B0062FBE6BF600BB911A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0265AFF42FBE6BF500BB911A /* LiveSubtitleTranslator */;
+			targetProxy = 0265B0052FBE6BF600BB911A /* PBXContainerItemProxy */;
+		};
+		0265B0102FBE6BF600BB911A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0265AFF42FBE6BF500BB911A /* LiveSubtitleTranslator */;
+			targetProxy = 0265B00F2FBE6BF600BB911A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0265B0162FBE6BF600BB911A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		0265B0172FBE6BF600BB911A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		0265B0192FBE6BF600BB911A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LiveSubtitleTranslator/LiveSubtitleTranslator.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAudioCaptureUsageDescription = "Live Subtitle Translator captures audio playing on this Mac to generate local translated subtitles.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.theseusresearch.LiveSubtitleTranslator;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		0265B01A2FBE6BF600BB911A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LiveSubtitleTranslator/LiveSubtitleTranslator.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAudioCaptureUsageDescription = "Live Subtitle Translator captures audio playing on this Mac to generate local translated subtitles.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.theseusresearch.LiveSubtitleTranslator;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		0265B01C2FBE6BF600BB911A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.theseusresearch.LiveSubtitleTranslatorTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LiveSubtitleTranslator.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LiveSubtitleTranslator";
+			};
+			name = Debug;
+		};
+		0265B01D2FBE6BF600BB911A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.theseusresearch.LiveSubtitleTranslatorTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LiveSubtitleTranslator.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LiveSubtitleTranslator";
+			};
+			name = Release;
+		};
+		0265B01F2FBE6BF600BB911A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.theseusresearch.LiveSubtitleTranslatorUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = LiveSubtitleTranslator;
+			};
+			name = Debug;
+		};
+		0265B0202FBE6BF600BB911A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.theseusresearch.LiveSubtitleTranslatorUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = LiveSubtitleTranslator;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0265AFF02FBE6BF500BB911A /* Build configuration list for PBXProject "LiveSubtitleTranslator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0265B0162FBE6BF600BB911A /* Debug */,
+				0265B0172FBE6BF600BB911A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0265B0182FBE6BF600BB911A /* Build configuration list for PBXNativeTarget "LiveSubtitleTranslator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0265B0192FBE6BF600BB911A /* Debug */,
+				0265B01A2FBE6BF600BB911A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0265B01B2FBE6BF600BB911A /* Build configuration list for PBXNativeTarget "LiveSubtitleTranslatorTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0265B01C2FBE6BF600BB911A /* Debug */,
+				0265B01D2FBE6BF600BB911A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0265B01E2FBE6BF600BB911A /* Build configuration list for PBXNativeTarget "LiveSubtitleTranslatorUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0265B01F2FBE6BF600BB911A /* Debug */,
+				0265B0202FBE6BF600BB911A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		02A7C0022FC0052100B7A001 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		02A7C0002FC0052100B7A001 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 02A7C0022FC0052100B7A001 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0265AFED2FBE6BF500BB911A /* Project object */;
+}

@@ -1,9 +1,33 @@
+# macOS local metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.localized
+
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
 ## User settings
 xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.xcscmblueprint
+
+## Build products and test output
+build/
+DerivedData/
+SourcePackages/
+*.xcarchive
+*.xcresult
+*.xcactivitylog
+*.moved-aside
 
 ## Obj-C/Swift specific
 *.hmap
@@ -27,9 +51,38 @@ playground.xcworkspace
 #
 # Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
 # hence it is not needed unless you have added a package configuration file to your project
-# .swiftpm
+# Keep Xcode SwiftPM Package.resolved pins tracked when dependencies are intentional.
 
 .build/
+.swiftpm/
+
+# Local secrets, signing material, and machine-specific app config
+.env
+.env.*
+!.env.example
+*.local.xcconfig
+Local*.xcconfig
+Private*.xcconfig
+Secrets*.xcconfig
+Secrets*.plist
+LocalSecrets*.plist
+GoogleService-Info.plist
+ServiceAccount*.json
+firebase*.json
+awsconfiguration.json
+amplifyconfiguration.json
+Sentry*.plist
+ExportOptions*.plist
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.p12
+*.p8
+*.pem
+*.key
+*.keystore
+*.jks
+AuthKey_*.p8
 
 # CocoaPods
 #
