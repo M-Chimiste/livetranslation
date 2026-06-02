@@ -172,19 +172,6 @@ xcodebuild -project LiveSubtitleTranslator.xcodeproj -scheme LiveSubtitleTransla
 
 If signing or destination selection becomes noisy in automation, keep the project compiling in Xcode and document the exact failure in the handoff.
 
-## Repository Hygiene
-
-- Keep local OS, editor, Xcode, SwiftPM cache, build, and test-result artifacts out of Git. `.gitignore` should cover `.DS_Store`, `build/`, `DerivedData/`, `*.xcresult`, `*.xcactivitylog`, `*.xcuserstate`, `.build/`, and `.swiftpm/`.
-- Keep source, tests, docs, the Xcode project, entitlements, and intentional SwiftPM pins trackable. Do not ignore `LiveSubtitleTranslator.xcodeproj`, `project_docs/`, `LiveSubtitleTranslator.entitlements`, or Xcode SwiftPM `Package.resolved` files.
-- When adding diagnostics exports or cache directories, use a narrow ignore rule for the generated local-output path instead of broad source-like patterns.
-
-## Sensitive Data and Sharing
-
-- Do not commit API keys, bearer tokens, shared secrets, passwords, private keys, signing certificates, provisioning profiles, service-account JSON, or vendor service plists.
-- Keep shared Xcode project signing metadata account-neutral. In particular, do not commit a personal `DEVELOPMENT_TEAM`; leave it blank in `project.pbxproj` and choose a local team in Xcode only for local builds.
-- If a feature needs local credentials or machine-specific build settings, store them in ignored files such as `.env`, `*.local.xcconfig`, `Secrets*.xcconfig`, or `LocalSecrets*.plist`, and commit only placeholder/sample files such as `.env.example`.
-- Before sharing the source, run a quick secret scan over tracked files and inspect any hits in `LiveSubtitleTranslator.xcodeproj/project.pbxproj`, entitlements, plist files, Swift source, and docs.
-
 ## Coding Style
 
 - Follow existing Swift project conventions as they emerge.

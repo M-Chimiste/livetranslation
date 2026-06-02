@@ -12,15 +12,21 @@ final class TranslationRouterService: TranslationService {
     private let settingsStore: SettingsStore
     private let mockTranslationService: TranslationService
     private let appleTranslationService: TranslationService
+    private let nllbTranslationService: TranslationService
+    private let hunyuanTranslationService: TranslationService
 
     init(
         settingsStore: SettingsStore,
         mockTranslationService: TranslationService,
-        appleTranslationService: TranslationService
+        appleTranslationService: TranslationService,
+        nllbTranslationService: TranslationService,
+        hunyuanTranslationService: TranslationService
     ) {
         self.settingsStore = settingsStore
         self.mockTranslationService = mockTranslationService
         self.appleTranslationService = appleTranslationService
+        self.nllbTranslationService = nllbTranslationService
+        self.hunyuanTranslationService = hunyuanTranslationService
     }
 
     func translate(
@@ -37,6 +43,18 @@ final class TranslationRouterService: TranslationService {
             )
         case .appleTranslation:
             return try await appleTranslationService.translate(
+                segment: segment,
+                context: context,
+                targetLanguage: targetLanguage
+            )
+        case .localNLLB:
+            return try await nllbTranslationService.translate(
+                segment: segment,
+                context: context,
+                targetLanguage: targetLanguage
+            )
+        case .localHunyuanMT:
+            return try await hunyuanTranslationService.translate(
                 segment: segment,
                 context: context,
                 targetLanguage: targetLanguage

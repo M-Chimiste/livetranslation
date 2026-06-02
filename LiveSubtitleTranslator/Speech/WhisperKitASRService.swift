@@ -2,7 +2,10 @@
 //  WhisperKitASRService.swift
 //  LiveSubtitleTranslator
 //
-//  Created by Codex on 5/21/26.
+//  Selectable alternative ASR backend (alongside Parakeet). Uses WhisperKit
+//  CoreML models via the argmax-oss-swift package. Same batch/flush ASRService
+//  contract as the Parakeet service: samples accumulate via `acceptAudioChunk`
+//  and a single `.final` segment is emitted on `flush()`.
 //
 
 import Foundation
@@ -124,8 +127,8 @@ final class WhisperKitASRService: ASRService {
             renewEventStream()
         }
 
-        let modelID = LocalASRSettings.canonicalModelID(
-            for: configuration.modelID ?? LocalASRSettings.defaults.modelID
+        let modelID = LocalASRSettings.canonicalWhisperKitModelID(
+            for: configuration.modelID ?? LocalASRSettings.whisperLargeV3ModelID
         )
 
         do {

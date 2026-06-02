@@ -32,7 +32,9 @@ struct LiveSubtitleTranslatorApp: App {
                 audioDiagnosticsModel: appState.audioDiagnosticsModel,
                 liveSubtitleSessionController: appState.liveSubtitleSessionController,
                 translationLanguageCatalog: appState.translationLanguageCatalog,
-                whisperKitModelCatalog: appState.whisperKitModelCatalog
+                parakeetModelCatalog: appState.parakeetModelCatalog,
+                nllbTranslationService: appState.nllbTranslationService,
+                hunyuanTranslationService: appState.hunyuanTranslationService
             )
         }
     }

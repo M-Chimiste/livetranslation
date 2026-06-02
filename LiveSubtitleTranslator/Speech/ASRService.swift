@@ -62,7 +62,9 @@ struct ASRConfiguration: Equatable, Sendable {
     ) {
         self.sourceLanguage = SubtitleLanguage(sourceLanguage).identifier
         self.latencyProfile = latencyProfile
-        self.modelID = modelID.map(LocalASRSettings.canonicalModelID(for:))
+        // Stored as-is; the selected ASR service canonicalizes within its own
+        // model family (Parakeet vs WhisperKit) at load time.
+        self.modelID = modelID
     }
 }
 

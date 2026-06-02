@@ -115,7 +115,10 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
     private static let unavailablePermissionMessage = "System audio recording permission could not be requested. Open System Settings > Privacy & Security > Screen & System Audio Recording > System Audio Recording Only and enable Live Subtitle Translator if it appears there."
 
     private let captureService: AudioCaptureService
-    private let asrService: ASRService
+    private let parakeetASRService: ASRService
+    private let whisperKitASRService: ASRService
+    /// The ASR service for the backend selected when capture last started.
+    private var activeASRService: ASRService
     private let permissionProvider: AudioCapturePermissionProviding
     private var levelTask: Task<Void, Never>?
     private var audioChunkTask: Task<Void, Never>?
@@ -138,7 +141,8 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
     convenience init(state: AudioCaptureDiagnosticsState = .placeholder) {
         self.init(
             captureService: ProcessTapAudioCaptureService(),
-            asrService: WhisperKitASRService(),
+            asrService: ParakeetASRService(),
+            whisperKitASRService: WhisperKitASRService(),
             permissionProvider: SystemAudioCapturePermissionProvider(),
             state: state
         )
@@ -147,11 +151,15 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
     init(
         captureService: AudioCaptureService,
         asrService: ASRService? = nil,
+        whisperKitASRService: ASRService? = nil,
         permissionProvider: AudioCapturePermissionProviding? = nil,
         state: AudioCaptureDiagnosticsState = .placeholder
     ) {
         self.captureService = captureService
-        self.asrService = asrService ?? WhisperKitASRService()
+        let parakeet = asrService ?? ParakeetASRService()
+        self.parakeetASRService = parakeet
+        self.whisperKitASRService = whisperKitASRService ?? WhisperKitASRService()
+        self.activeASRService = parakeet
         let resolvedPermissionProvider = permissionProvider ?? StaticAudioCapturePermissionProvider(status: .authorized)
         self.permissionProvider = resolvedPermissionProvider
         self.state = state
@@ -220,7 +228,7 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
         }
 
         lastASRBackend = asrBackend
-        lastASRModelID = localASRSettings.modelID
+        lastASRModelID = localASRSettings.activeModelID(for: asrBackend)
         state.asrDiagnostics = .idle(
             backend: asrBackend,
             modelID: localASRSettings.modelID
@@ -241,7 +249,7 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
             latencyProfile: latencyProfile
         )
         guard didStartASR || !requiresASR else {
-            let message = state.asrDiagnostics.lastErrorMessage ?? "Local WhisperKit ASR failed to start."
+            let message = state.asrDiagnostics.lastErrorMessage ?? "Local Parakeet ASR failed to start."
             state.captureState = captureWasAlreadyRunning ? captureService.state : .error(message)
             state.lastErrorMessage = message
             if !captureWasAlreadyRunning {
@@ -264,7 +272,7 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
             state.permissionStatus = permissionProvider.currentStatus()
             state.sourceAvailability = .available
         } catch {
-            await asrService.stop()
+            await activeASRService.stop()
             state.captureState = .error(error.localizedDescription)
             state.lastErrorMessage = error.localizedDescription
             shouldRouteAudioToASR = false
@@ -279,7 +287,7 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
         asrEventSink = nil
         audioActivitySink = nil
         await cancelASREventTaskAndWait()
-        await asrService.stop()
+        await activeASRService.stop()
         state.asrDiagnostics = .idle(
             backend: lastASRBackend,
             modelID: lastASRModelID
@@ -294,7 +302,7 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
         await cancelCaptureObservationTasksAndWait()
 
         await captureService.stop()
-        await asrService.stop()
+        await activeASRService.stop()
         state.captureState = captureService.state
         state.lastLevel = .zero
         state.preprocessingDiagnostics = .zero
@@ -346,19 +354,26 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
         sourceLanguage: SubtitleLanguage,
         latencyProfile: LatencyProfile
     ) async -> Bool {
-        guard backend == .localWhisperKit else { return true }
+        switch backend {
+        case .localParakeet:
+            activeASRService = parakeetASRService
+        case .localWhisperKit:
+            activeASRService = whisperKitASRService
+        case .mock, .remoteLAN:
+            return true
+        }
 
         state.asrDiagnostics.lifecycleState = .loading
 
         do {
-            try await asrService.configure(
+            try await activeASRService.configure(
                 ASRConfiguration(
                     sourceLanguage: sourceLanguage.identifier,
                     latencyProfile: latencyProfile,
-                    modelID: localASRSettings.modelID
+                    modelID: localASRSettings.activeModelID(for: backend)
                 )
             )
-            try await asrService.start()
+            try await activeASRService.start()
             startConsumingASREventsIfNeeded()
             shouldRouteAudioToASR = true
             asrRoutingGeneration += 1
@@ -501,7 +516,7 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
 
         asrObservationGeneration += 1
 
-        let events = asrService.events
+        let events = activeASRService.events
         let generation = asrObservationGeneration
         asrEventTask = Task { @MainActor [weak self] in
             defer {
@@ -543,7 +558,7 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
         else { return }
 
         do {
-            try await asrService.acceptAudioChunk(chunk)
+            try await activeASRService.acceptAudioChunk(chunk)
             guard captureObservationGeneration == captureGeneration,
                   asrRoutingGeneration == routingGeneration,
                   shouldRouteAudioToASR
@@ -579,7 +594,7 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
         state.asrDiagnostics.lifecycleState = .transcribing
 
         do {
-            try await asrService.flush()
+            try await activeASRService.flush()
             guard captureObservationGeneration == captureGeneration,
                   asrRoutingGeneration == routingGeneration
             else { return }

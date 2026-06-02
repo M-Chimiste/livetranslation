@@ -48,18 +48,24 @@ final class LiveSubtitleSessionController: ObservableObject {
     private let overlayController: SubtitleOverlayWindowController
     private let audioDiagnosticsModel: AudioCaptureDiagnosticsModel
     private let subtitleCoordinator: SubtitleCoordinator
+    private let nllbTranslationService: NLLBTranslationService?
+    private let hunyuanTranslationService: HunyuanMTTranslationService?
     private var captureWasRunningBeforeStart = false
 
     init(
         settingsStore: SettingsStore,
         overlayController: SubtitleOverlayWindowController,
         audioDiagnosticsModel: AudioCaptureDiagnosticsModel,
-        subtitleCoordinator: SubtitleCoordinator
+        subtitleCoordinator: SubtitleCoordinator,
+        nllbTranslationService: NLLBTranslationService? = nil,
+        hunyuanTranslationService: HunyuanMTTranslationService? = nil
     ) {
         self.settingsStore = settingsStore
         self.overlayController = overlayController
         self.audioDiagnosticsModel = audioDiagnosticsModel
         self.subtitleCoordinator = subtitleCoordinator
+        self.nllbTranslationService = nllbTranslationService
+        self.hunyuanTranslationService = hunyuanTranslationService
     }
 
     func start() async {
@@ -76,6 +82,17 @@ final class LiveSubtitleSessionController: ObservableObject {
 
         state = .starting
         captureWasRunningBeforeStart = audioDiagnosticsModel.state.captureState.isRunning
+
+        // Warm the local translation model in parallel with capture/ASR startup so
+        // the first subtitle isn't stalled by the one-time model load.
+        switch settingsStore.settings.translationBackend {
+        case .localNLLB:
+            if let nllbTranslationService { Task { await nllbTranslationService.warmUp() } }
+        case .localHunyuanMT:
+            if let hunyuanTranslationService { Task { await hunyuanTranslationService.warmUp() } }
+        default:
+            break
+        }
 
         await subtitleCoordinator.stop()
         overlayController.show()
@@ -137,8 +154,8 @@ final class LiveSubtitleSessionController: ObservableObject {
             return "Live subtitles require System Output audio source for this phase."
         }
 
-        if settings.asrBackend != .localWhisperKit {
-            return "Live subtitles require Local WhisperKit ASR for this phase."
+        if settings.asrBackend != .localParakeet, settings.asrBackend != .localWhisperKit {
+            return "Live subtitles require a local ASR backend (Parakeet or WhisperKit)."
         }
 
         if settings.translationBackend == .remoteLAN {

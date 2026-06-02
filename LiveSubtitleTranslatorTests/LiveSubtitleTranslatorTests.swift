@@ -159,11 +159,11 @@ private final class FakeAudioCapturePermissionProvider: AudioCapturePermissionPr
     }
 }
 
-private enum FakeWhisperKitTranscriberError: LocalizedError {
+private enum FakeParakeetTranscriberError: LocalizedError {
     case transcriptionFailed
 
     var errorDescription: String? {
-        "Fake WhisperKit transcription failed."
+        "Fake Parakeet transcription failed."
     }
 }
 
@@ -175,11 +175,10 @@ private enum FakeASRServiceError: LocalizedError {
     }
 }
 
-private actor FakeWhisperKitTranscriber: WhisperKitTranscribing {
+private actor FakeParakeetTranscriber: ParakeetTranscribing {
     var loadedModelIDs: [String] = []
     var transcribedSamples: [[Float]] = []
-    var transcribedLanguages: [String] = []
-    var output = WhisperKitTranscriptionOutput(text: "Hello from WhisperKit")
+    var output = ParakeetTranscriptionOutput(text: "Hello from Parakeet")
     var transcriptionError: Error?
 
     func load(modelID: String) async throws {
@@ -188,18 +187,34 @@ private actor FakeWhisperKitTranscriber: WhisperKitTranscribing {
         }
     }
 
-    func transcribe(samples: [Float], language: String) async throws -> WhisperKitTranscriptionOutput {
+    func transcribe(samples: [Float]) async throws -> ParakeetTranscriptionOutput {
         if let transcriptionError {
             throw transcriptionError
         }
 
         transcribedSamples.append(samples)
-        transcribedLanguages.append(language)
         return output
     }
 
     func setTranscriptionError(_ error: Error?) {
         transcriptionError = error
+    }
+}
+
+private actor FakeWhisperKitTranscriber: WhisperKitTranscribing {
+    var loadedModelIDs: [String] = []
+    var transcribedLanguages: [String] = []
+    var output = WhisperKitTranscriptionOutput(text: "Hello from WhisperKit")
+
+    func load(modelID: String) async throws {
+        if loadedModelIDs.last != modelID {
+            loadedModelIDs.append(modelID)
+        }
+    }
+
+    func transcribe(samples: [Float], language: String) async throws -> WhisperKitTranscriptionOutput {
+        transcribedLanguages.append(language)
+        return output
     }
 }
 
@@ -260,27 +275,6 @@ private final class FakeAppleTranslationClient: AppleTranslationClient {
         }
 
         return translatedText
-    }
-}
-
-private final class FakeWhisperKitModelProvider: WhisperKitModelProviding {
-    var localSupport: WhisperKitModelCatalogSnapshot
-    var remoteSupport: WhisperKitModelCatalogSnapshot
-
-    init(
-        localSupport: WhisperKitModelCatalogSnapshot,
-        remoteSupport: WhisperKitModelCatalogSnapshot
-    ) {
-        self.localSupport = localSupport
-        self.remoteSupport = remoteSupport
-    }
-
-    func localModelSupport() -> WhisperKitModelCatalogSnapshot {
-        localSupport
-    }
-
-    func remoteModelSupport() async -> WhisperKitModelCatalogSnapshot {
-        remoteSupport
     }
 }
 
@@ -458,7 +452,7 @@ struct LiveSubtitleTranslatorTests {
         let settings = AppSettings.defaults
 
         #expect(settings.audioSource == .systemOutput)
-        #expect(settings.asrBackend == .localWhisperKit)
+        #expect(settings.asrBackend == .localParakeet)
         #expect(settings.translationBackend == .appleTranslation)
         #expect(settings.sourceLanguage == .english)
         #expect(settings.targetLanguage == .simplifiedChinese)
@@ -473,13 +467,13 @@ struct LiveSubtitleTranslatorTests {
         #expect(settings.voiceActivity.sensitivity == .balanced)
         #expect(settings.voiceActivity.finalSilenceDuration == 1.0)
         #expect(settings.localASR == .defaults)
-        #expect(settings.localASR.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(settings.localASR.modelID == LocalASRSettings.parakeetV3ModelID)
     }
 
     @Test
     func backendPickerOptionsHideInternalMockBackends() {
-        #expect(ASRBackend.userSelectableCases == [.localWhisperKit, .remoteLAN])
-        #expect(TranslationBackend.userSelectableCases == [.appleTranslation, .remoteLAN])
+        #expect(ASRBackend.userSelectableCases == [.localParakeet, .localWhisperKit, .remoteLAN])
+        #expect(TranslationBackend.userSelectableCases == [.appleTranslation, .localNLLB, .localHunyuanMT, .remoteLAN])
         #expect(!ASRBackend.userSelectableCases.contains(.mock))
         #expect(!TranslationBackend.userSelectableCases.contains(.mock))
     }
@@ -495,7 +489,7 @@ struct LiveSubtitleTranslatorTests {
 
         let decodedSettings = try JSONDecoder().decode(AppSettings.self, from: legacyData)
 
-        #expect(decodedSettings.asrBackend == .localWhisperKit)
+        #expect(decodedSettings.asrBackend == .localParakeet)
         #expect(decodedSettings.translationBackend == .appleTranslation)
     }
 
@@ -510,7 +504,7 @@ struct LiveSubtitleTranslatorTests {
         let storageKey = "settings"
         let userDefaults = try #require(UserDefaults(suiteName: suiteName))
         store.settings.audioSource = .selectedApp
-        store.settings.asrBackend = .localWhisperKit
+        store.settings.asrBackend = .localParakeet
         store.settings.translationBackend = .appleTranslation
         store.settings.sourceLanguage = SubtitleLanguage("ja")
         store.settings.targetLanguage = .traditionalChinese
@@ -524,7 +518,7 @@ struct LiveSubtitleTranslatorTests {
             finalSilenceDuration: 0.7
         )
         store.settings.localASR = LocalASRSettings(
-            modelID: LocalASRSettings.largeV3ModelID
+            modelID: LocalASRSettings.parakeetV2ModelID
         )
 
         let reloadedStore = SettingsStore(userDefaults: userDefaults, storageKey: storageKey)
@@ -550,49 +544,60 @@ struct LiveSubtitleTranslatorTests {
 
     @Test
     func localASRSettingsAndConfigurationRoundTripDefaults() throws {
-        let settings = LocalASRSettings(modelID: LocalASRSettings.largeV3ModelID)
+        let settings = LocalASRSettings(modelID: LocalASRSettings.parakeetV2ModelID)
 
         let data = try JSONEncoder().encode(settings)
         let decodedSettings = try JSONDecoder().decode(LocalASRSettings.self, from: data)
 
         #expect(decodedSettings == settings)
-        #expect(LocalASRSettings.defaults.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(LocalASRSettings.defaults.modelID == LocalASRSettings.parakeetV3ModelID)
         #expect(LocalASRSettings.availableModelIDs == [
-            LocalASRSettings.largeV3ModelID,
-            LocalASRSettings.largeV3TurboModelID,
-            LocalASRSettings.tinyModelID
+            LocalASRSettings.parakeetV3ModelID,
+            LocalASRSettings.parakeetV2ModelID
         ])
-        #expect(LocalASRSettings.displayName(for: LocalASRSettings.tinyModelID) == "tiny")
-        #expect(LocalASRSettings.displayName(for: LocalASRSettings.largeV3ModelID) == "large-v3-v20240930_626MB")
-        #expect(LocalASRSettings.displayName(for: LocalASRSettings.largeV3TurboModelID) == "large-v3-v20240930_turbo_632MB")
-        #expect(ASRConfiguration.defaults.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(LocalASRSettings.displayName(for: LocalASRSettings.parakeetV2ModelID) == "Parakeet v2 (English)")
+        #expect(LocalASRSettings.displayName(for: LocalASRSettings.parakeetV3ModelID) == "Parakeet v3 (multilingual)")
+        #expect(ASRConfiguration.defaults.modelID == LocalASRSettings.parakeetV3ModelID)
+
+        // WhisperKit selection round-trips independently and has its own catalog/display.
+        #expect(LocalASRSettings.defaults.whisperKitModelID == LocalASRSettings.whisperLargeV3ModelID)
+        #expect(LocalASRSettings.whisperKitModelIDs == [
+            LocalASRSettings.whisperLargeV3ModelID,
+            LocalASRSettings.whisperLargeV3TurboModelID,
+            LocalASRSettings.whisperTinyModelID
+        ])
+        #expect(LocalASRSettings.whisperKitDisplayName(for: LocalASRSettings.whisperTinyModelID) == "Whisper tiny")
+        #expect(LocalASRSettings.canonicalWhisperKitModelID(for: "tiny") == LocalASRSettings.whisperTinyModelID)
+
+        let perBackend = LocalASRSettings(
+            modelID: LocalASRSettings.parakeetV2ModelID,
+            whisperKitModelID: LocalASRSettings.whisperTinyModelID
+        )
+        #expect(perBackend.activeModelID(for: .localParakeet) == LocalASRSettings.parakeetV2ModelID)
+        #expect(perBackend.activeModelID(for: .localWhisperKit) == LocalASRSettings.whisperTinyModelID)
 
         let configuration = ASRConfiguration(
             sourceLanguage: "en",
             latencyProfile: .fast,
-            modelID: LocalASRSettings.largeV3ModelID
+            modelID: LocalASRSettings.parakeetV2ModelID
         )
 
         #expect(configuration.sourceLanguage == "en")
         #expect(configuration.latencyProfile == .fast)
-        #expect(configuration.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(configuration.modelID == LocalASRSettings.parakeetV2ModelID)
 
-        let legacyTinyData = try #require(#"{"modelID":"tiny"}"#.data(using: .utf8))
-        let legacyLargeData = try #require(#"{"modelID":"large-v3-v20240930_626MB"}"#.data(using: .utf8))
-        let legacyLargeTurboData = try #require(#"{"modelID":"large-v3-v20240930_turbo_632MB"}"#.data(using: .utf8))
+        // The persisted Parakeet field still migrates any legacy Whisper IDs to v3.
+        let legacyTinyData = try #require(#"{"modelID":"openai_whisper-tiny"}"#.data(using: .utf8))
         let decodedLegacyTiny = try JSONDecoder().decode(LocalASRSettings.self, from: legacyTinyData)
-        let decodedLegacyLarge = try JSONDecoder().decode(LocalASRSettings.self, from: legacyLargeData)
-        let decodedLegacyLargeTurbo = try JSONDecoder().decode(LocalASRSettings.self, from: legacyLargeTurboData)
+        #expect(decodedLegacyTiny.modelID == LocalASRSettings.parakeetV3ModelID)
 
-        #expect(decodedLegacyTiny.modelID == LocalASRSettings.tinyModelID)
-        #expect(decodedLegacyLarge.modelID == LocalASRSettings.largeV3ModelID)
-        #expect(decodedLegacyLargeTurbo.modelID == LocalASRSettings.largeV3TurboModelID)
+        // ASRConfiguration no longer force-canonicalizes; the service does it per family.
         #expect(
             ASRConfiguration(
                 sourceLanguage: "en",
                 latencyProfile: .balanced,
-                modelID: LocalASRSettings.legacyTinyModelID
-            ).modelID == LocalASRSettings.tinyModelID
+                modelID: "openai_whisper-tiny"
+            ).modelID == "openai_whisper-tiny"
         )
     }
 
@@ -602,7 +607,7 @@ struct LiveSubtitleTranslatorTests {
         let legacyData = try #require("""
         {
           "audioSource": "selectedApp",
-          "asrBackend": "localWhisperKit",
+          "asrBackend": "localParakeet",
           "translationBackend": "appleTranslation",
           "targetLanguage": "zh-Hant",
           "latencyProfile": "moreAccurate",
@@ -614,7 +619,7 @@ struct LiveSubtitleTranslatorTests {
         let decodedSettings = try JSONDecoder().decode(AppSettings.self, from: legacyData)
 
         #expect(decodedSettings.audioSource == .selectedApp)
-        #expect(decodedSettings.asrBackend == .localWhisperKit)
+        #expect(decodedSettings.asrBackend == .localParakeet)
         #expect(decodedSettings.translationBackend == .appleTranslation)
         #expect(decodedSettings.sourceLanguage == .english)
         #expect(decodedSettings.targetLanguage == .traditionalChinese)
@@ -659,7 +664,7 @@ struct LiveSubtitleTranslatorTests {
         #expect(AudioSource.systemOutput.kind == .systemOutput)
         #expect(ASRConfiguration.defaults.sourceLanguage == "en")
         #expect(ASRConfiguration.defaults.latencyProfile == .balanced)
-        #expect(ASRConfiguration.defaults.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(ASRConfiguration.defaults.modelID == LocalASRSettings.parakeetV3ModelID)
     }
 
     @Test
@@ -725,42 +730,22 @@ struct LiveSubtitleTranslatorTests {
 
     @MainActor
     @Test
-    func whisperKitModelCatalogUsesSupportedModelsAndMergesRemoteModels() async {
-        let provider = FakeWhisperKitModelProvider(
-            localSupport: WhisperKitModelCatalogSnapshot(
-                defaultModelID: LocalASRSettings.largeV3ModelID,
-                supportedModelIDs: [
-                    LocalASRSettings.largeV3ModelID,
-                    LocalASRSettings.tinyModelID,
-                    "disabled-local"
-                ],
-                disabledModelIDs: ["disabled-local"]
-            ),
-            remoteSupport: WhisperKitModelCatalogSnapshot(
-                defaultModelID: LocalASRSettings.largeV3TurboModelID,
-                supportedModelIDs: [
-                    LocalASRSettings.largeV3TurboModelID,
-                    "remote-supported",
-                    "remote-disabled"
-                ],
-                disabledModelIDs: ["remote-disabled"]
-            )
-        )
-        let catalog = WhisperKitModelCatalog(
-            selectedModelID: LocalASRSettings.largeV3ModelID,
-            provider: provider
+    func parakeetModelCatalogExposesAvailableVersions() async {
+        let catalog = ParakeetModelCatalog(
+            selectedModelID: LocalASRSettings.parakeetV3ModelID
         )
 
-        #expect(catalog.modelIDs.contains(LocalASRSettings.largeV3ModelID))
-        #expect(catalog.modelIDs.contains(LocalASRSettings.tinyModelID))
-        #expect(!catalog.modelIDs.contains("disabled-local"))
+        #expect(catalog.modelIDs == [
+            LocalASRSettings.parakeetV3ModelID,
+            LocalASRSettings.parakeetV2ModelID
+        ])
+        #expect(catalog.modelIDs.first == LocalASRSettings.parakeetV3ModelID)
+        #expect(!catalog.isRefreshing)
 
-        await catalog.refresh(selectedModelID: "remote-supported")
+        await catalog.refresh(selectedModelID: LocalASRSettings.parakeetV2ModelID)
 
-        #expect(catalog.modelIDs.contains("remote-supported"))
-        #expect(catalog.modelIDs.contains(LocalASRSettings.largeV3TurboModelID))
-        #expect(!catalog.modelIDs.contains("remote-disabled"))
-        #expect(catalog.modelIDs.first == "remote-supported")
+        #expect(catalog.modelIDs.contains(LocalASRSettings.parakeetV2ModelID))
+        #expect(catalog.modelIDs.contains(LocalASRSettings.parakeetV3ModelID))
     }
 
     @MainActor
@@ -792,7 +777,7 @@ struct LiveSubtitleTranslatorTests {
         #expect(state.voiceActivityDiagnostics.lastSpeechDurationDisplayValue == "None")
         #expect(state.asrDiagnostics == .placeholder)
         #expect(state.asrDiagnostics.lifecycleStateDisplayValue == "Idle")
-        #expect(state.asrDiagnostics.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(state.asrDiagnostics.modelID == LocalASRSettings.parakeetV3ModelID)
         #expect(state.asrDiagnostics.lastTranscriptDisplayValue == "None")
         #expect(model.state == state)
     }
@@ -1388,8 +1373,8 @@ struct LiveSubtitleTranslatorTests {
         await model.startCapture(
             audioSourceOption: .systemOutput,
             voiceActivitySettings: .defaults,
-            asrBackend: .localWhisperKit,
-            localASRSettings: LocalASRSettings(modelID: LocalASRSettings.largeV3ModelID),
+            asrBackend: .localParakeet,
+            localASRSettings: LocalASRSettings(modelID: LocalASRSettings.parakeetV3ModelID),
             sourceLanguage: SubtitleLanguage("ja"),
             latencyProfile: .fast
         )
@@ -1397,7 +1382,7 @@ struct LiveSubtitleTranslatorTests {
         #expect(asrService.isRunning)
         #expect(asrService.configuration.sourceLanguage == "ja")
         #expect(asrService.configuration.latencyProfile == .fast)
-        #expect(asrService.configuration.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(asrService.configuration.modelID == LocalASRSettings.parakeetV3ModelID)
         #expect(model.state.asrDiagnostics.lifecycleState == .ready)
 
         captureService.emitChunk(chunk)
@@ -1453,7 +1438,7 @@ struct LiveSubtitleTranslatorTests {
         await model.startCapture(
             audioSourceOption: .systemOutput,
             voiceActivitySettings: .defaults,
-            asrBackend: .localWhisperKit,
+            asrBackend: .localParakeet,
             localASRSettings: .defaults,
             latencyProfile: .balanced
         )
@@ -1500,7 +1485,7 @@ struct LiveSubtitleTranslatorTests {
 
         await model.startCapture(
             audioSourceOption: .systemOutput,
-            asrBackend: .localWhisperKit
+            asrBackend: .localParakeet
         )
         asrService.emit(.final(segment))
 
@@ -1536,8 +1521,8 @@ struct LiveSubtitleTranslatorTests {
         await model.startCapture(
             audioSourceOption: .systemOutput,
             voiceActivitySettings: .defaults,
-            asrBackend: .localWhisperKit,
-            localASRSettings: LocalASRSettings(modelID: LocalASRSettings.largeV3ModelID),
+            asrBackend: .localParakeet,
+            localASRSettings: LocalASRSettings(modelID: LocalASRSettings.parakeetV3ModelID),
             latencyProfile: .balanced,
             requiresASR: true
         )
@@ -1546,7 +1531,7 @@ struct LiveSubtitleTranslatorTests {
         #expect(captureService.state == .capturing)
         #expect(model.state.captureState == .capturing)
         #expect(asrService.isRunning)
-        #expect(asrService.configuration.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(asrService.configuration.modelID == LocalASRSettings.parakeetV3ModelID)
 
         captureService.emitChunk(chunk)
         for _ in 0..<1_000 where asrService.acceptedAudioChunks.isEmpty {
@@ -1579,7 +1564,7 @@ struct LiveSubtitleTranslatorTests {
 
         await model.startCapture(
             audioSourceOption: .systemOutput,
-            asrBackend: .localWhisperKit
+            asrBackend: .localParakeet
         )
         captureService.emitChunk(firstChunk)
 
@@ -1599,7 +1584,7 @@ struct LiveSubtitleTranslatorTests {
 
         await model.startCapture(
             audioSourceOption: .systemOutput,
-            asrBackend: .localWhisperKit
+            asrBackend: .localParakeet
         )
         captureService.emitChunk(secondChunk)
 
@@ -1705,9 +1690,9 @@ struct LiveSubtitleTranslatorTests {
         await environment.liveSession.start()
 
         #expect(environment.captureService.startRequests.isEmpty)
-        #expect(environment.audioDiagnosticsModel.state.lastErrorMessage == "Live subtitles require Local WhisperKit ASR for this phase.")
+        #expect(environment.audioDiagnosticsModel.state.lastErrorMessage == "Live subtitles require a local ASR backend (Parakeet or WhisperKit).")
 
-        environment.settingsStore.settings.asrBackend = .localWhisperKit
+        environment.settingsStore.settings.asrBackend = .localParakeet
         environment.settingsStore.settings.translationBackend = .remoteLAN
         await environment.liveSession.start()
 
@@ -1747,7 +1732,7 @@ struct LiveSubtitleTranslatorTests {
         #expect(environment.overlayController.isVisible)
         #expect(environment.captureService.startRequests == [.systemOutput])
         #expect(environment.asrService.isRunning)
-        #expect(environment.asrService.configuration.modelID == LocalASRSettings.largeV3ModelID)
+        #expect(environment.asrService.configuration.modelID == LocalASRSettings.parakeetV3ModelID)
         #expect(environment.subtitleCoordinator.pipelineState == .listening)
         #expect(environment.displayModel.overlayStatus == .listening)
         #expect(environment.displayModel.displayState == nil)
@@ -1860,7 +1845,7 @@ struct LiveSubtitleTranslatorTests {
         await environment.audioDiagnosticsModel.startCapture(
             audioSourceOption: .systemOutput,
             voiceActivitySettings: .defaults,
-            asrBackend: .localWhisperKit,
+            asrBackend: .localParakeet,
             localASRSettings: environment.settingsStore.settings.localASR,
             latencyProfile: .balanced
         )
@@ -2373,10 +2358,14 @@ struct LiveSubtitleTranslatorTests {
         }
         let mockService = RecordingTranslationService(translatedText: "模拟")
         let appleService = RecordingTranslationService(translatedText: "苹果")
+        let nllbService = RecordingTranslationService(translatedText: "本地")
+        let hunyuanService = RecordingTranslationService(translatedText: "混元")
         let router = TranslationRouterService(
             settingsStore: settingsStore,
             mockTranslationService: mockService,
-            appleTranslationService: appleService
+            appleTranslationService: appleService,
+            nllbTranslationService: nllbService,
+            hunyuanTranslationService: hunyuanService
         )
         let segment = makeTranscriptSegment("Hello", stability: .final)
 
@@ -2389,6 +2378,20 @@ struct LiveSubtitleTranslatorTests {
 
         settingsStore.settings.translationBackend = .appleTranslation
         let appleTranslation = try await router.translate(
+            segment: segment,
+            context: [],
+            targetLanguage: .simplifiedChinese
+        )
+
+        settingsStore.settings.translationBackend = .localNLLB
+        let nllbTranslation = try await router.translate(
+            segment: segment,
+            context: [],
+            targetLanguage: .simplifiedChinese
+        )
+
+        settingsStore.settings.translationBackend = .localHunyuanMT
+        let hunyuanTranslation = try await router.translate(
             segment: segment,
             context: [],
             targetLanguage: .simplifiedChinese
@@ -2408,20 +2411,104 @@ struct LiveSubtitleTranslatorTests {
 
         #expect(mockTranslation.translatedText == "模拟")
         #expect(appleTranslation.translatedText == "苹果")
+        #expect(nllbTranslation.translatedText == "本地")
+        #expect(hunyuanTranslation.translatedText == "混元")
         #expect(mockService.requests.count == 1)
         #expect(appleService.requests.count == 1)
+        #expect(nllbService.requests.count == 1)
+        #expect(hunyuanService.requests.count == 1)
+    }
+
+    /// End-to-end check that downloads the real NLLB CoreML model (~3.2 GB) and
+    /// runs the decode loop. Gated behind an env var so the normal suite skips it.
+    /// Run with: RUN_NLLB_INTEGRATION=1 ... -only-testing:.../nllbEngineTranslatesEnglishToChineseEndToEnd
+    @Test
+    func nllbEngineTranslatesEnglishToChineseEndToEnd() async throws {
+        guard ProcessInfo.processInfo.environment["RUN_NLLB_INTEGRATION"] == "1" else { return }
+
+        let engine = LiveNLLBEngine()
+        let source = "Hello, how are you today?"
+        let translated = try await engine.translate(
+            text: source,
+            sourceLanguage: .english,
+            targetLanguage: .simplifiedChinese
+        )
+
+        print("NLLB_RESULT_SOURCE: \(source)")
+        print("NLLB_RESULT_TRANSLATION: \(translated)")
+
+        #expect(!translated.isEmpty)
+        // Expect at least one CJK Han character in the output.
+        let containsHan = translated.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
+        #expect(containsHan, "expected Chinese output, got: \(translated)")
+    }
+
+    /// End-to-end check that downloads the real Hunyuan-MT MLX model (~1.9 GB) and
+    /// runs the decode loop on the GPU. Gated behind an env var; writes the result
+    /// to Application Support for inspection.
+    @Test
+    func hunyuanEngineTranslatesEnglishToChineseEndToEnd() async throws {
+        guard ProcessInfo.processInfo.environment["RUN_HUNYUAN_INTEGRATION"] == "1" else { return }
+
+        let engine = LiveHunyuanEngine()
+        let source = "This is a reference, not a tutorial."
+        let translated = try await engine.translate(
+            text: source,
+            sourceLanguage: .english,
+            targetLanguage: .simplifiedChinese
+        )
+
+        print("HUNYUAN_RESULT: \(source) => \(translated)")
+        #expect(!translated.isEmpty)
+        let containsHan = translated.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
+        #expect(containsHan, "expected Chinese output, got: \(translated)")
+    }
+
+    @Test
+    func nllbTokenizationMapsLanguagesAndBuildsDecodingSequences() {
+        // FLORES-200 language mapping.
+        #expect(NLLBTokenization.floresCode(for: .english) == "eng_Latn")
+        #expect(NLLBTokenization.floresCode(for: .simplifiedChinese) == "zho_Hans")
+        #expect(NLLBTokenization.floresCode(for: .traditionalChinese) == "zho_Hant")
+        #expect(NLLBTokenization.floresCode(for: SubtitleLanguage("ja")) == nil)
+
+        // Encoder input: [srcLang, ...tokens..., EOS] padded with PAD; mask 1 then 0.
+        let (inputIDs, attentionMask) = NLLBTokenization.encoderInput(
+            sourceTokenIDs: [10, 20, 30],
+            sourceLanguageID: 256_047,
+            maxLength: 8
+        )
+        #expect(inputIDs == [256_047, 10, 20, 30, NLLBTokenization.eosTokenID, 1, 1, 1])
+        #expect(attentionMask == [1, 1, 1, 1, 1, 0, 0, 0])
+
+        // Overlong input keeps the language prefix and a trailing EOS.
+        let (truncatedIDs, truncatedMask) = NLLBTokenization.encoderInput(
+            sourceTokenIDs: [11, 12, 13, 14, 15, 16],
+            sourceLanguageID: 256_047,
+            maxLength: 4
+        )
+        #expect(truncatedIDs.count == 4)
+        #expect(truncatedIDs.first == 256_047)
+        #expect(truncatedIDs.last == NLLBTokenization.eosTokenID)
+        #expect(truncatedMask == [1, 1, 1, 1])
+
+        // Decoder seed: [</s>, <target lang code>].
+        #expect(NLLBTokenization.decoderSeed(forcedBOSTokenID: 256_200) == [NLLBTokenization.eosTokenID, 256_200])
+
+        // Argmax over a logits row.
+        #expect(NLLBTokenization.argmax([0.1, 0.9, 0.3, -1.0]) == 1)
     }
 
     @MainActor
     @Test
-    func whisperKitASRServiceLoadsSelectedModelOnceAndFlushesTranscript() async throws {
-        let transcriber = FakeWhisperKitTranscriber()
-        let service = WhisperKitASRService(transcriber: transcriber)
+    func parakeetASRServiceLoadsSelectedModelOnceAndFlushesTranscript() async throws {
+        let transcriber = FakeParakeetTranscriber()
+        let service = ParakeetASRService(transcriber: transcriber)
         var iterator = service.events.makeAsyncIterator()
         let configuration = ASRConfiguration(
-            sourceLanguage: "ja",
+            sourceLanguage: "en",
             latencyProfile: .fast,
-            modelID: LocalASRSettings.largeV3ModelID
+            modelID: LocalASRSettings.parakeetV3ModelID
         )
         let firstChunk = makeAudioChunk(rms: 0.02, duration: 0.5)
         let secondChunk = makeAudioChunk(rms: 0.03, duration: 0.5)
@@ -2435,13 +2522,12 @@ struct LiveSubtitleTranslatorTests {
 
         let event = await iterator.next()
 
-        #expect(await transcriber.loadedModelIDs == [LocalASRSettings.largeV3ModelID])
+        #expect(await transcriber.loadedModelIDs == [LocalASRSettings.parakeetV3ModelID])
         #expect(await transcriber.transcribedSamples.first?.count == firstChunk.samples.count + secondChunk.samples.count)
-        #expect(await transcriber.transcribedLanguages == ["ja"])
         #expect(service.pendingSampleCount == 0)
         if case let .final(segment) = event {
-            #expect(segment.text == "Hello from WhisperKit")
-            #expect(segment.sourceLanguage == "ja")
+            #expect(segment.text == "Hello from Parakeet")
+            #expect(segment.sourceLanguage == "en")
             #expect(segment.endTime == 1)
         } else {
             Issue.record("Expected final transcript")
@@ -2450,9 +2536,36 @@ struct LiveSubtitleTranslatorTests {
 
     @MainActor
     @Test
-    func whisperKitASRServiceIgnoresEmptyAndStoppedInput() async throws {
+    func whisperKitASRServiceLoadsSelectedWhisperModelAndFlushesTranscript() async throws {
         let transcriber = FakeWhisperKitTranscriber()
         let service = WhisperKitASRService(transcriber: transcriber)
+        var iterator = service.events.makeAsyncIterator()
+        try await service.configure(
+            ASRConfiguration(
+                sourceLanguage: "en",
+                latencyProfile: .balanced,
+                modelID: LocalASRSettings.whisperLargeV3ModelID
+            )
+        )
+        try await service.start()
+        try await service.acceptAudioChunk(makeAudioChunk(rms: 0.02, duration: 0.5))
+        try await service.flush()
+
+        let event = await iterator.next()
+        #expect(await transcriber.loadedModelIDs == [LocalASRSettings.whisperLargeV3ModelID])
+        #expect(await transcriber.transcribedLanguages == ["en"])
+        if case let .final(segment) = event {
+            #expect(segment.text == "Hello from WhisperKit")
+        } else {
+            Issue.record("Expected final transcript")
+        }
+    }
+
+    @MainActor
+    @Test
+    func parakeetASRServiceIgnoresEmptyAndStoppedInput() async throws {
+        let transcriber = FakeParakeetTranscriber()
+        let service = ParakeetASRService(transcriber: transcriber)
 
         try await service.acceptAudioChunk(makeAudioChunk(rms: 0.02))
         try await service.flush()
@@ -2475,10 +2588,10 @@ struct LiveSubtitleTranslatorTests {
 
     @MainActor
     @Test
-    func whisperKitASRServiceEmitsErrorWhenTranscriptionFails() async throws {
-        let transcriber = FakeWhisperKitTranscriber()
-        await transcriber.setTranscriptionError(FakeWhisperKitTranscriberError.transcriptionFailed)
-        let service = WhisperKitASRService(transcriber: transcriber)
+    func parakeetASRServiceEmitsErrorWhenTranscriptionFails() async throws {
+        let transcriber = FakeParakeetTranscriber()
+        await transcriber.setTranscriptionError(FakeParakeetTranscriberError.transcriptionFailed)
+        let service = ParakeetASRService(transcriber: transcriber)
         var iterator = service.events.makeAsyncIterator()
 
         try await service.start()
@@ -2488,11 +2601,11 @@ struct LiveSubtitleTranslatorTests {
             try await service.flush()
             Issue.record("Expected flush to throw")
         } catch {
-            #expect(error.localizedDescription == "Fake WhisperKit transcription failed.")
+            #expect(error.localizedDescription == "Fake Parakeet transcription failed.")
         }
 
         let event = await iterator.next()
-        #expect(event == .error("Fake WhisperKit transcription failed."))
+        #expect(event == .error("Fake Parakeet transcription failed."))
         #expect(service.pendingSampleCount == 0)
     }
 
@@ -2972,9 +3085,9 @@ struct LiveSubtitleTranslatorTests {
     private func makeLiveSubtitleSessionForTesting() throws -> LiveSubtitleSessionTestEnvironment {
         let (settingsStore, suiteName) = try makeIsolatedSettingsStore()
         settingsStore.settings.audioSource = .systemOutput
-        settingsStore.settings.asrBackend = .localWhisperKit
+        settingsStore.settings.asrBackend = .localParakeet
         settingsStore.settings.translationBackend = .mock
-        settingsStore.settings.localASR = LocalASRSettings(modelID: LocalASRSettings.largeV3ModelID)
+        settingsStore.settings.localASR = LocalASRSettings(modelID: LocalASRSettings.parakeetV3ModelID)
 
         let displayModel = SubtitleDisplayModel()
         let overlayController = SubtitleOverlayWindowController(

@@ -23,7 +23,7 @@ struct AppSettings: Codable, Equatable {
 
     static let defaults = AppSettings(
         audioSource: .systemOutput,
-        asrBackend: .localWhisperKit,
+        asrBackend: .localParakeet,
         translationBackend: .appleTranslation,
         sourceLanguage: .english,
         targetLanguage: .simplifiedChinese,
@@ -79,7 +79,7 @@ struct AppSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         self.audioSource = try container.decodeIfPresent(AudioSourceOption.self, forKey: .audioSource) ?? .systemOutput
-        let decodedASRBackend = try container.decodeIfPresent(ASRBackend.self, forKey: .asrBackend) ?? .localWhisperKit
+        let decodedASRBackend = try container.decodeIfPresent(ASRBackend.self, forKey: .asrBackend) ?? .localParakeet
         let decodedTranslationBackend = try container.decodeIfPresent(TranslationBackend.self, forKey: .translationBackend) ?? .appleTranslation
         self.asrBackend = decodedASRBackend.userSelectableValue
         self.translationBackend = decodedTranslationBackend.userSelectableValue
@@ -95,59 +95,107 @@ struct AppSettings: Codable, Equatable {
 }
 
 struct LocalASRSettings: Codable, Equatable, Sendable {
-    nonisolated static let tinyModelID = "openai_whisper-tiny"
-    nonisolated static let largeV3ModelID = "openai_whisper-large-v3-v20240930_626MB"
-    nonisolated static let largeV3TurboModelID = "openai_whisper-large-v3-v20240930_turbo_632MB"
-    nonisolated static let legacyTinyModelID = "tiny"
-    nonisolated static let legacyLargeV3ModelID = "large-v3-v20240930_626MB"
-    nonisolated static let legacyLargeV3TurboModelID = "large-v3-v20240930_turbo_632MB"
-    nonisolated static let availableModelIDs = [largeV3ModelID, largeV3TurboModelID, tinyModelID]
-    nonisolated static let defaults = LocalASRSettings(modelID: largeV3ModelID)
+    // Parakeet (FluidAudio) model versions. v3 is multilingual (auto-detects the
+    // 25 supported European languages incl. English); v2 is English-only.
+    nonisolated static let parakeetV3ModelID = "parakeet-tdt-0.6b-v3"
+    nonisolated static let parakeetV2ModelID = "parakeet-tdt-0.6b-v2"
+    nonisolated static let availableModelIDs = [parakeetV3ModelID, parakeetV2ModelID]
 
+    // WhisperKit model IDs (selectable alternative backend).
+    nonisolated static let whisperTinyModelID = "openai_whisper-tiny"
+    nonisolated static let whisperLargeV3ModelID = "openai_whisper-large-v3-v20240930_626MB"
+    nonisolated static let whisperLargeV3TurboModelID = "openai_whisper-large-v3-v20240930_turbo_632MB"
+    nonisolated static let whisperKitModelIDs = [whisperLargeV3ModelID, whisperLargeV3TurboModelID, whisperTinyModelID]
+
+    nonisolated static let defaults = LocalASRSettings(
+        modelID: parakeetV3ModelID,
+        whisperKitModelID: whisperLargeV3ModelID
+    )
+
+    /// The selected Parakeet model (kept as `modelID` for backward-compatible decoding).
     var modelID: String
+    /// The selected WhisperKit model.
+    var whisperKitModelID: String
 
-    nonisolated init(modelID: String) {
+    nonisolated init(modelID: String, whisperKitModelID: String = whisperLargeV3ModelID) {
         self.modelID = Self.canonicalModelID(for: modelID)
+        self.whisperKitModelID = Self.canonicalWhisperKitModelID(for: whisperKitModelID)
     }
 
     private enum CodingKeys: String, CodingKey {
         case modelID
+        case whisperKitModelID
     }
 
     nonisolated init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let decodedModelID = try container.decodeIfPresent(String.self, forKey: .modelID) ?? Self.largeV3ModelID
+        let decodedModelID = try container.decodeIfPresent(String.self, forKey: .modelID) ?? Self.parakeetV3ModelID
+        let decodedWhisperKitModelID = try container.decodeIfPresent(String.self, forKey: .whisperKitModelID) ?? Self.whisperLargeV3ModelID
         self.modelID = Self.canonicalModelID(for: decodedModelID)
+        self.whisperKitModelID = Self.canonicalWhisperKitModelID(for: decodedWhisperKitModelID)
     }
 
     nonisolated func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(modelID, forKey: .modelID)
+        try container.encode(whisperKitModelID, forKey: .whisperKitModelID)
     }
 
+    /// The model ID for the given ASR backend (Parakeet vs WhisperKit have separate selections).
+    nonisolated func activeModelID(for backend: ASRBackend) -> String {
+        backend == .localWhisperKit ? whisperKitModelID : modelID
+    }
+
+    /// Canonical Parakeet ID. Legacy WhisperKit IDs (from before the Parakeet
+    /// migration, when this single field stored a Whisper model) collapse to the
+    /// v3 default so existing persisted *Parakeet* selections keep working.
     nonisolated static func canonicalModelID(for modelID: String) -> String {
         switch modelID {
-        case legacyTinyModelID:
-            tinyModelID
-        case legacyLargeV3ModelID:
-            largeV3ModelID
-        case legacyLargeV3TurboModelID:
-            largeV3TurboModelID
+        case parakeetV2ModelID:
+            return parakeetV2ModelID
+        case parakeetV3ModelID:
+            return parakeetV3ModelID
         default:
-            modelID
+            return parakeetV3ModelID
+        }
+    }
+
+    /// Canonical WhisperKit ID; maps legacy unnamespaced names to the namespaced
+    /// model IDs and falls back to large-v3.
+    nonisolated static func canonicalWhisperKitModelID(for modelID: String) -> String {
+        switch modelID {
+        case whisperTinyModelID, "tiny":
+            return whisperTinyModelID
+        case whisperLargeV3ModelID, "large-v3-v20240930_626MB":
+            return whisperLargeV3ModelID
+        case whisperLargeV3TurboModelID, "large-v3-v20240930_turbo_632MB":
+            return whisperLargeV3TurboModelID
+        default:
+            return whisperLargeV3ModelID
         }
     }
 
     nonisolated static func displayName(for modelID: String) -> String {
         switch canonicalModelID(for: modelID) {
-        case tinyModelID:
-            "tiny"
-        case largeV3ModelID:
-            "large-v3-v20240930_626MB"
-        case largeV3TurboModelID:
-            "large-v3-v20240930_turbo_632MB"
+        case parakeetV2ModelID:
+            return "Parakeet v2 (English)"
+        case parakeetV3ModelID:
+            return "Parakeet v3 (multilingual)"
         default:
-            modelID
+            return modelID
+        }
+    }
+
+    nonisolated static func whisperKitDisplayName(for modelID: String) -> String {
+        switch canonicalWhisperKitModelID(for: modelID) {
+        case whisperTinyModelID:
+            return "Whisper tiny"
+        case whisperLargeV3ModelID:
+            return "Whisper large-v3"
+        case whisperLargeV3TurboModelID:
+            return "Whisper large-v3 turbo"
+        default:
+            return modelID
         }
     }
 }
@@ -214,21 +262,42 @@ enum AudioSourceOption: String, CaseIterable, Codable, Equatable, Identifiable {
 
 enum ASRBackend: String, CaseIterable, Codable, Equatable, Identifiable {
     case mock
+    case localParakeet
     case localWhisperKit
     case remoteLAN
 
-    static let userSelectableCases: [ASRBackend] = [.localWhisperKit, .remoteLAN]
+    static let userSelectableCases: [ASRBackend] = [.localParakeet, .localWhisperKit, .remoteLAN]
 
     var id: String { rawValue }
 
     var userSelectableValue: ASRBackend {
-        self == .mock ? .localWhisperKit : self
+        self == .mock ? .localParakeet : self
+    }
+
+    /// Custom decode so any unknown value falls back to the default local backend
+    /// rather than throwing.
+    init(from decoder: Decoder) throws {
+        let rawValue = try decoder.singleValueContainer().decode(String.self)
+        switch rawValue {
+        case ASRBackend.mock.rawValue:
+            self = .mock
+        case ASRBackend.localWhisperKit.rawValue:
+            self = .localWhisperKit
+        case ASRBackend.remoteLAN.rawValue:
+            self = .remoteLAN
+        case ASRBackend.localParakeet.rawValue:
+            self = .localParakeet
+        default:
+            self = .localParakeet
+        }
     }
 
     var displayName: String {
         switch self {
         case .mock:
             "Mock"
+        case .localParakeet:
+            "Local Parakeet"
         case .localWhisperKit:
             "Local WhisperKit"
         case .remoteLAN:
@@ -240,9 +309,11 @@ enum ASRBackend: String, CaseIterable, Codable, Equatable, Identifiable {
 enum TranslationBackend: String, CaseIterable, Codable, Equatable, Identifiable {
     case mock
     case appleTranslation
+    case localNLLB
+    case localHunyuanMT
     case remoteLAN
 
-    static let userSelectableCases: [TranslationBackend] = [.appleTranslation, .remoteLAN]
+    static let userSelectableCases: [TranslationBackend] = [.appleTranslation, .localNLLB, .localHunyuanMT, .remoteLAN]
 
     var id: String { rawValue }
 
@@ -256,6 +327,10 @@ enum TranslationBackend: String, CaseIterable, Codable, Equatable, Identifiable 
             "Mock"
         case .appleTranslation:
             "Apple Translation"
+        case .localNLLB:
+            "Local NLLB"
+        case .localHunyuanMT:
+            "Local Hunyuan-MT"
         case .remoteLAN:
             "Remote LAN"
         }

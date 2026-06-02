@@ -21,7 +21,9 @@ struct SettingsView: View {
     @ObservedObject var audioDiagnosticsModel: AudioCaptureDiagnosticsModel
     @ObservedObject var liveSubtitleSessionController: LiveSubtitleSessionController
     @ObservedObject var translationLanguageCatalog: AppleTranslationLanguageCatalog
-    @ObservedObject var whisperKitModelCatalog: WhisperKitModelCatalog
+    @ObservedObject var parakeetModelCatalog: ParakeetModelCatalog
+    @ObservedObject var nllbTranslationService: NLLBTranslationService
+    @ObservedObject var hunyuanTranslationService: HunyuanMTTranslationService
     @Environment(\.openURL) private var openURL
 
     private let audioPermissionSettingsURL = URL(
@@ -121,21 +123,65 @@ struct SettingsView: View {
                     }
                 }
 
-                if settingsStore.settings.asrBackend == .localWhisperKit {
-                    Picker("WhisperKit Model", selection: $settingsStore.settings.localASR.modelID) {
-                        ForEach(whisperKitModelCatalog.modelIDs, id: \.self) { modelID in
+                if settingsStore.settings.asrBackend == .localParakeet {
+                    Picker("Parakeet Model", selection: $settingsStore.settings.localASR.modelID) {
+                        ForEach(parakeetModelCatalog.modelIDs, id: \.self) { modelID in
                             Text(LocalASRSettings.displayName(for: modelID)).tag(modelID)
                         }
                     }
 
-                    if whisperKitModelCatalog.isRefreshing {
-                        LabeledContent("WhisperKit Models", value: "Refreshing...")
+                    if parakeetModelCatalog.isRefreshing {
+                        LabeledContent("Parakeet Models", value: "Refreshing...")
+                    }
+                } else if settingsStore.settings.asrBackend == .localWhisperKit {
+                    Picker("WhisperKit Model", selection: $settingsStore.settings.localASR.whisperKitModelID) {
+                        ForEach(LocalASRSettings.whisperKitModelIDs, id: \.self) { modelID in
+                            Text(LocalASRSettings.whisperKitDisplayName(for: modelID)).tag(modelID)
+                        }
                     }
                 }
 
                 Picker("Translation Backend", selection: $settingsStore.settings.translationBackend) {
                     ForEach(TranslationBackend.userSelectableCases) { backend in
                         Text(backend.displayName).tag(backend)
+                    }
+                }
+
+                if settingsStore.settings.translationBackend == .localNLLB {
+                    Button {
+                        Task { await nllbTranslationService.warmUp() }
+                    } label: {
+                        if nllbTranslationService.isPreparing {
+                            Label("Warming Up…", systemImage: "hourglass")
+                        } else if nllbTranslationService.isReady {
+                            Label("Translation Model Ready", systemImage: "checkmark.circle")
+                        } else {
+                            Label("Warm Up Translation Model", systemImage: "bolt.fill")
+                        }
+                    }
+                    .disabled(nllbTranslationService.isPreparing || nllbTranslationService.isReady)
+
+                    if let nllbStatus = nllbTranslationService.statusMessage {
+                        LabeledContent("NLLB Model", value: nllbStatus)
+                    }
+                }
+
+                if settingsStore.settings.translationBackend == .localHunyuanMT {
+                    Button {
+                        Task { await hunyuanTranslationService.warmUp() }
+                    } label: {
+                        if hunyuanTranslationService.isPreparing {
+                            Label("Warming Up…", systemImage: "hourglass")
+                        } else if hunyuanTranslationService.isReady {
+                            Label("Hunyuan-MT Ready", systemImage: "checkmark.circle")
+                        } else {
+                            Label("Warm Up Hunyuan-MT", systemImage: "bolt.fill")
+                        }
+                    }
+                    .disabled(hunyuanTranslationService.isPreparing || hunyuanTranslationService.isReady)
+
+                    if let hunyuanStatus = hunyuanTranslationService.statusMessage {
+                        LabeledContent("Hunyuan-MT Model", value: hunyuanStatus)
                     }
                 }
 
@@ -163,12 +209,17 @@ struct SettingsView: View {
                     LabeledContent("Language Availability", value: statusMessage)
                 }
 
-                Picker("Translation Profile", selection: $settingsStore.settings.latencyProfile) {
-                    ForEach(LatencyProfile.allCases) { profile in
-                        Text(profile.displayName).tag(profile)
+                // Only affects the Apple Translation backend (maps to Apple's
+                // low-latency vs high-fidelity strategy). Other backends ignore it,
+                // so it's scoped to Apple Translation to avoid confusion.
+                if settingsStore.settings.translationBackend == .appleTranslation {
+                    Picker("Apple Translation Profile", selection: $settingsStore.settings.latencyProfile) {
+                        ForEach(LatencyProfile.allCases) { profile in
+                            Text(profile.displayName).tag(profile)
+                        }
                     }
+                    .disabled(areLiveAudioSettingsLocked)
                 }
-                .disabled(areLiveAudioSettingsLocked)
 
                 Picker("VAD Sensitivity", selection: $settingsStore.settings.voiceActivity.sensitivity) {
                     ForEach(VADSensitivity.allCases) { sensitivity in
@@ -210,7 +261,7 @@ struct SettingsView: View {
         .task {
             await audioDiagnosticsModel.refreshSources()
             await refreshLanguageCatalog()
-            await whisperKitModelCatalog.refresh(
+            await parakeetModelCatalog.refresh(
                 selectedModelID: settingsStore.settings.localASR.modelID
             )
         }
@@ -221,7 +272,7 @@ struct SettingsView: View {
         }
         .onChange(of: settingsStore.settings.localASR.modelID) {
             Task {
-                await whisperKitModelCatalog.refresh(
+                await parakeetModelCatalog.refresh(
                     selectedModelID: settingsStore.settings.localASR.modelID
                 )
             }

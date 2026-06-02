@@ -17,8 +17,10 @@ final class AppState: ObservableObject {
     let mockASRService: MockASRService
     let mockTranslationService: MockTranslationService
     let appleTranslationService: AppleTranslationService
+    let nllbTranslationService: NLLBTranslationService
+    let hunyuanTranslationService: HunyuanMTTranslationService
     let translationLanguageCatalog: AppleTranslationLanguageCatalog
-    let whisperKitModelCatalog: WhisperKitModelCatalog
+    let parakeetModelCatalog: ParakeetModelCatalog
     let translationRouterService: TranslationRouterService
     let metricsRecorder: MetricsRecorder
     let audioDiagnosticsModel: AudioCaptureDiagnosticsModel
@@ -46,13 +48,17 @@ final class AppState: ObservableObject {
             initialSourceLanguage: settingsStore.settings.sourceLanguage,
             initialTargetLanguage: settingsStore.settings.targetLanguage
         )
-        let whisperKitModelCatalog = WhisperKitModelCatalog(
+        let parakeetModelCatalog = ParakeetModelCatalog(
             selectedModelID: settingsStore.settings.localASR.modelID
         )
+        let nllbTranslationService = NLLBTranslationService()
+        let hunyuanTranslationService = HunyuanMTTranslationService()
         let translationRouterService = TranslationRouterService(
             settingsStore: settingsStore,
             mockTranslationService: mockTranslationService,
-            appleTranslationService: appleTranslationService
+            appleTranslationService: appleTranslationService,
+            nllbTranslationService: nllbTranslationService,
+            hunyuanTranslationService: hunyuanTranslationService
         )
         let metricsRecorder = MetricsRecorder()
         let audioDiagnosticsModel = AudioCaptureDiagnosticsModel()
@@ -67,7 +73,9 @@ final class AppState: ObservableObject {
             settingsStore: settingsStore,
             overlayController: overlayController,
             audioDiagnosticsModel: audioDiagnosticsModel,
-            subtitleCoordinator: subtitleCoordinator
+            subtitleCoordinator: subtitleCoordinator,
+            nllbTranslationService: nllbTranslationService,
+            hunyuanTranslationService: hunyuanTranslationService
         )
 
         self.settingsStore = settingsStore
@@ -78,8 +86,10 @@ final class AppState: ObservableObject {
         self.mockASRService = mockASRService
         self.mockTranslationService = mockTranslationService
         self.appleTranslationService = appleTranslationService
+        self.nllbTranslationService = nllbTranslationService
+        self.hunyuanTranslationService = hunyuanTranslationService
         self.translationLanguageCatalog = translationLanguageCatalog
-        self.whisperKitModelCatalog = whisperKitModelCatalog
+        self.parakeetModelCatalog = parakeetModelCatalog
         self.translationRouterService = translationRouterService
         self.metricsRecorder = metricsRecorder
         self.audioDiagnosticsModel = audioDiagnosticsModel
@@ -106,13 +116,17 @@ final class AppState: ObservableObject {
             initialSourceLanguage: settingsStore.settings.sourceLanguage,
             initialTargetLanguage: settingsStore.settings.targetLanguage
         )
-        let whisperKitModelCatalog = WhisperKitModelCatalog(
+        let parakeetModelCatalog = ParakeetModelCatalog(
             selectedModelID: settingsStore.settings.localASR.modelID
         )
+        let nllbTranslationService = NLLBTranslationService()
+        let hunyuanTranslationService = HunyuanMTTranslationService()
         let translationRouterService = TranslationRouterService(
             settingsStore: settingsStore,
             mockTranslationService: mockTranslationService,
-            appleTranslationService: appleTranslationService
+            appleTranslationService: appleTranslationService,
+            nllbTranslationService: nllbTranslationService,
+            hunyuanTranslationService: hunyuanTranslationService
         )
         let metricsRecorder = MetricsRecorder()
         let audioDiagnosticsModel = AudioCaptureDiagnosticsModel()
@@ -127,7 +141,9 @@ final class AppState: ObservableObject {
             settingsStore: settingsStore,
             overlayController: overlayController,
             audioDiagnosticsModel: audioDiagnosticsModel,
-            subtitleCoordinator: subtitleCoordinator
+            subtitleCoordinator: subtitleCoordinator,
+            nllbTranslationService: nllbTranslationService,
+            hunyuanTranslationService: hunyuanTranslationService
         )
 
         self.settingsStore = settingsStore
@@ -138,8 +154,10 @@ final class AppState: ObservableObject {
         self.mockASRService = mockASRService
         self.mockTranslationService = mockTranslationService
         self.appleTranslationService = appleTranslationService
+        self.nllbTranslationService = nllbTranslationService
+        self.hunyuanTranslationService = hunyuanTranslationService
         self.translationLanguageCatalog = translationLanguageCatalog
-        self.whisperKitModelCatalog = whisperKitModelCatalog
+        self.parakeetModelCatalog = parakeetModelCatalog
         self.translationRouterService = translationRouterService
         self.metricsRecorder = metricsRecorder
         self.audioDiagnosticsModel = audioDiagnosticsModel
