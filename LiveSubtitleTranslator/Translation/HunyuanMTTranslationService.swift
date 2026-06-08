@@ -98,13 +98,28 @@ actor LiveHunyuanEngine: HunyuanEngine {
     private var tokenizer: (any Tokenizer)?
     private var model: HunyuanForCausalLM?
 
-    /// FLORES-ish target language name for the instruction prompt.
+    /// English-language name of a subtitle language for the instruction prompt
+    /// (the prompt is written in English). Derived generically from the locale
+    /// identifier so any of Hunyuan-MT's supported languages works — no hardcoded
+    /// list. Script is handled generically: a Traditional script → "Traditional <X>"
+    /// (e.g. zh-Hant → "Traditional Chinese"); the default/Simplified form uses the
+    /// base name (e.g. zh-Hans → "Chinese").
     nonisolated static func languageName(for language: SubtitleLanguage) -> String? {
-        switch language.identifier {
-        case "en": return "English"
-        case "zh-Hans": return "Chinese"
-        case "zh-Hant": return "Traditional Chinese"
-        default: return nil
+        let english = Locale(identifier: "en_US")
+        let components = Locale.Language(identifier: language.identifier)
+
+        guard let code = components.languageCode?.identifier,
+              let baseName = english.localizedString(forLanguageCode: code)
+        else {
+            // Fall back to the full-identifier display name if the code can't be resolved.
+            return english.localizedString(forIdentifier: language.identifier)
+        }
+
+        switch components.script?.identifier {
+        case "Hant":
+            return "Traditional \(baseName)"
+        default:
+            return baseName
         }
     }
 

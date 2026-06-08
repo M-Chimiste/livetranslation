@@ -633,6 +633,31 @@ struct LiveSubtitleTranslatorTests {
 
     @MainActor
     @Test
+    func appSettingsDecodesOverlayWithoutBackgroundOpacity() throws {
+        let legacyData = try #require("""
+        {
+          "audioSource": "systemOutput",
+          "asrBackend": "localParakeet",
+          "translationBackend": "appleTranslation",
+          "targetLanguage": "zh-Hans",
+          "latencyProfile": "balanced",
+          "diagnosticsEnabled": true,
+          "overlay": {
+            "frame": { "x": 20, "y": 40, "width": 640, "height": 120 },
+            "isLocked": false
+          }
+        }
+        """.data(using: .utf8))
+
+        let decodedSettings = try JSONDecoder().decode(AppSettings.self, from: legacyData)
+
+        #expect(decodedSettings.overlay.frame == OverlayFrame(x: 20, y: 40, width: 640, height: 120))
+        #expect(decodedSettings.overlay.isLocked == false)
+        #expect(decodedSettings.overlay.backgroundOpacity == OverlaySettings.defaultBackgroundOpacity)
+    }
+
+    @MainActor
+    @Test
     func mockPipelineStartStopIsIdempotent() {
         let controller = MockPipelineController()
 
@@ -2462,6 +2487,17 @@ struct LiveSubtitleTranslatorTests {
         #expect(!translated.isEmpty)
         let containsHan = translated.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
         #expect(containsHan, "expected Chinese output, got: \(translated)")
+    }
+
+    @Test
+    func hunyuanLanguageNameIsDerivedGenericallyNotHardcoded() {
+        #expect(LiveHunyuanEngine.languageName(for: .english) == "English")
+        #expect(LiveHunyuanEngine.languageName(for: .simplifiedChinese) == "Chinese")
+        #expect(LiveHunyuanEngine.languageName(for: .traditionalChinese) == "Traditional Chinese")
+        // Languages with no hardcoded entry still resolve via the locale.
+        #expect(LiveHunyuanEngine.languageName(for: SubtitleLanguage("ja")) == "Japanese")
+        #expect(LiveHunyuanEngine.languageName(for: SubtitleLanguage("fr")) == "French")
+        #expect(LiveHunyuanEngine.languageName(for: SubtitleLanguage("de")) == "German")
     }
 
     @Test

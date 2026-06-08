@@ -201,13 +201,42 @@ struct LocalASRSettings: Codable, Equatable, Sendable {
 }
 
 struct OverlaySettings: Codable, Equatable {
+    /// Opacity of the subtitle background plate (0 = fully transparent, 1 = solid black).
+    static let defaultBackgroundOpacity: Double = 0.58
+
     var frame: OverlayFrame
     var isLocked: Bool
+    var backgroundOpacity: Double
 
     static let defaults = OverlaySettings(
         frame: .defaults,
-        isLocked: true
+        isLocked: true,
+        backgroundOpacity: defaultBackgroundOpacity
     )
+
+    init(frame: OverlayFrame, isLocked: Bool, backgroundOpacity: Double = defaultBackgroundOpacity) {
+        self.frame = frame
+        self.isLocked = isLocked
+        self.backgroundOpacity = backgroundOpacity
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case frame
+        case isLocked
+        case backgroundOpacity
+    }
+
+    // Custom decode so settings persisted before `backgroundOpacity` existed (which
+    // have an `overlay` object with `frame`/`isLocked` but no opacity) still decode —
+    // a synthesized decoder would throw on the missing key, and AppSettings's
+    // `decodeIfPresent(OverlaySettings.self ...)` does not swallow nested errors.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.frame = try container.decode(OverlayFrame.self, forKey: .frame)
+        self.isLocked = try container.decode(Bool.self, forKey: .isLocked)
+        self.backgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .backgroundOpacity)
+            ?? Self.defaultBackgroundOpacity
+    }
 }
 
 struct OverlayFrame: Codable, Equatable {

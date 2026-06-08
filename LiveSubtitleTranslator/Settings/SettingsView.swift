@@ -61,6 +61,18 @@ struct SettingsView: View {
                 LabeledContent("Visibility", value: overlayController.isVisible ? "Visible" : "Hidden")
                 LabeledContent("Interaction", value: settingsStore.settings.overlay.isLocked ? "Locked" : "Unlocked")
 
+                Slider(
+                    value: $settingsStore.settings.overlay.backgroundOpacity,
+                    in: 0.0...1.0
+                ) {
+                    Text("Background Opacity")
+                }
+                LabeledContent("Background Opacity", value: backgroundOpacityDisplayValue)
+
+                Text("Lower values make the subtitle background more transparent. Show the overlay to preview while you drag.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
                 overlayActions
             }
 
@@ -277,6 +289,11 @@ struct SettingsView: View {
                 )
             }
         }
+    }
+
+    private var backgroundOpacityDisplayValue: String {
+        let percent = Int((settingsStore.settings.overlay.backgroundOpacity * 100).rounded())
+        return "\(percent)%"
     }
 
     private var areLiveAudioSettingsLocked: Bool {

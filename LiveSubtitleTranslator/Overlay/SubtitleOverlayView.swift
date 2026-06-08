@@ -53,7 +53,7 @@ struct SubtitleOverlayView: View {
 
     private var subtitleBackground: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(Color.black.opacity(0.58))
+            .fill(Color.black.opacity(settingsStore.settings.overlay.backgroundOpacity))
             .shadow(color: .black.opacity(0.45), radius: 10, x: 0, y: 3)
     }
 
