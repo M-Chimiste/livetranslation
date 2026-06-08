@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Orientation
 
-Native macOS menu-bar app that captures system audio via Core Audio process taps, transcribes English with WhisperKit, translates to Chinese via Apple Translation, and renders subtitles in an AppKit overlay panel. Mock backends exist alongside real ones and are still routinely useful for development.
+Native macOS menu-bar app that captures system audio via Core Audio process taps, transcribes speech on-device (Parakeet by default, WhisperKit as an alternative), translates to Chinese (Apple Translation by default; on-device NLLB or Hunyuan-MT also selectable), and renders subtitles in an AppKit overlay panel. ASR and translation backends are runtime-selectable in Settings. Mock backends exist alongside real ones and are still routinely useful for development.
 
 Authoritative status / next-task source: [`AGENTS.md`](AGENTS.md) (root) and [`project_docs/project_status.md`](project_docs/project_status.md). Treat the root `AGENTS.md` as current; `project_docs/AGENTS.md` is the older seed file. Product/architecture docs are in [`project_docs/docs/`](project_docs/docs/) — read `03_ARCHITECTURE.md` before non-trivial pipeline changes and `04_IMPLEMENTATION_PLAN.md` / `05_CODEX_TASK_BACKLOG.md` to see which phase the next task belongs to.
 
@@ -40,9 +40,9 @@ Pipeline:
 ```
 Core Audio process tap  →  AudioRingBuffer  →  AudioResampler (16 kHz mono Float32)
   →  AudioChunkAssembler + energy VAD (SpeechActivityEvent)
-  →  ASRService (WhisperKitASRService / MockASRService)
+  →  ASRService (ParakeetASRService | WhisperKitASRService | MockASRService)
   →  SubtitleCoordinator + SubtitleStabilizer
-  →  TranslationRouterService → (AppleTranslationService | MockTranslationService)
+  →  TranslationRouterService → (AppleTranslationService | NLLBTranslationService | HunyuanMTTranslationService | MockTranslationService)
   →  SubtitleDisplayModel  →  AppKit NSPanel (SubtitleOverlayWindowController)
 ```
 
@@ -52,12 +52,14 @@ Module layout (real, not aspirational):
 
 - `App/` — `LiveSubtitleTranslatorApp`, `AppState`, `MenuBarContentView`, `LiveSubtitleSessionController` (starts/stops the live pipeline), `MockPipelineController`, `PipelineState`.
 - `AudioCapture/` — `AudioCaptureService` protocol, `ProcessTapAudioCaptureService` (real Core Audio path), `AudioRingBuffer`, `AudioResampler`, `AudioChunkAssembler`, `VoiceActivity`, `AudioLevel`, `AudioPreprocessingDiagnostics`, `AudioCaptureError`. **No `MockAudioCaptureService` file exists** — fake capture lives in the test target.
-- `Speech/` — `ASRService` protocol, `WhisperKitASRService`, `MockASRService`.
-- `Translation/` — `TranslationService` protocol, `AppleTranslationService`, `MockTranslationService`, and `TranslationRouterService` which picks the backend from `SettingsStore` at translate time. `SubtitleCoordinator` always receives the router; do not wire concrete translation services into the coordinator directly.
+- `Speech/` — `ASRService` protocol, `ParakeetASRService` (FluidAudio CoreML, default), `ParakeetModelCatalog`, `WhisperKitASRService`, `MockASRService`.
+- `Translation/` — `TranslationService` protocol, `AppleTranslationService` (+ `AppleTranslationLanguageCatalog`), `NLLBTranslationService` (+ `NLLBTokenization`, CoreML), `HunyuanMTTranslationService` (+ `HunyuanMTModel`, MLX), `MockTranslationService`, and `TranslationRouterService` which picks the backend from `SettingsStore` at translate time. `SubtitleCoordinator` always receives the router; do not wire concrete translation services into the coordinator directly.
 - `Subtitles/` — `SubtitleCoordinator`, `SubtitleStabilizer`, `SubtitleLineWrapper`, `SubtitleDisplayModel`, `SubtitleDisplayState`, `MockSubtitleTicker`.
 - `Overlay/` — `SubtitleOverlayWindowController` (NSPanel) + `SubtitleOverlayView` (SwiftUI via `NSHostingView`).
 - `Settings/` — `AppSettings`, `SettingsStore`, `SettingsView`. Persisted via `UserDefaults`; `AppSettings` includes a legacy-decode path that tests pin (`appSettingsDecodesLegacySettingsWithoutOverlayFields`) — preserve backwards-compatible decoding when changing the model.
-- `Diagnostics/` — `MetricsRecorder`, `AudioCaptureDiagnosticsModel`, `ASRDiagnostics`.
+- `Diagnostics/` — `MetricsRecorder`, `AudioCaptureDiagnosticsModel`, `AudioCapturePermissionProvider`, `ASRDiagnostics`.
+
+Swift Package dependencies (resolved by Xcode on first build): `FluidAudio` (Parakeet), `argmax-oss-swift`/WhisperKit, `swift-transformers` (tokenizers/Hub downloads), `mlx-swift` (Hunyuan-MT inference).
 
 ### Non-obvious constraints
 
@@ -65,15 +67,15 @@ Module layout (real, not aspirational):
 - **Core Audio process taps are the primary capture path** (`CATapDescription`, `AudioHardwareCreateProcessTap`, aggregate device + `AudioDeviceCreateIOProcID`). ScreenCaptureKit is a fallback only — it would force Screen Recording permission for an audio-only feature.
 - **The IOProc callback must stay trivial:** validate format, copy samples into `AudioRingBuffer`, return. No allocations, no inference, no SwiftUI/AppKit calls, no `await`, no per-buffer logging. All heavy work happens off the callback thread by draining the ring buffer in a background task.
 - **Mock-first remains the development discipline.** Even now that real backends exist, `MockASRService` / `MockTranslationService` / the test-target fake capture service are how coordinator and overlay changes get tested without audio permission or model downloads. The router pattern means flipping a setting selects mock vs. real at runtime.
-- **Translation is a separate stage from ASR.** Whisper transcribes English; English → Chinese requires a second pass (Apple Translation today; LAN remote planned later). Do not assume Whisper alone produces Chinese.
+- **Translation is a separate stage from ASR.** ASR transcribes English; English → Chinese requires a second pass (Apple Translation, NLLB, or Hunyuan-MT depending on the selected backend; LAN remote planned later). Do not assume the ASR stage alone produces Chinese.
 - **Partial transcripts churn.** `SubtitleStabilizer` exists to avoid translating every partial and to suppress flicker — translate on `final`, on stable partials, or on punctuation+silence, and keep the previous final subtitle visible until the next is ready. Defaults live in `project_docs/docs/03_ARCHITECTURE.md`.
-- **First-run live mode may hit the network** to download the selected WhisperKit model and Apple Translation language assets. Surface failures clearly: overlay shows a short status string; Settings keeps the detailed error.
+- **First-run live mode may hit the network** to download the selected on-device model: Parakeet (FluidAudio), WhisperKit, NLLB (CoreML, `cstr/nllb-200-coreml-128` via Hugging Face Hub), Hunyuan-MT (`mlx-community/Hy-MT2-1.8B-8bit`), plus Apple Translation language assets. These are local-inference models fetched once and cached — not cloud inference APIs. Surface failures clearly: overlay shows a short status string; Settings keeps the detailed error.
 - **UI updates on the main actor; Swift concurrency elsewhere** — but never `await` inside a Core Audio callback.
 
 ## Project-specific guardrails
 
 - **No DRM circumvention, no protected-video capture, no content extraction.** Audio only, for personal accessibility/context.
-- **No public cloud APIs in the default path.** Local or LAN only.
+- **No public cloud inference APIs.** All ASR/translation runs on-device (Parakeet/WhisperKit/NLLB/Hunyuan-MT via ANE/GPU, Apple Translation) or over LAN. Model *weights* are downloaded once from Hugging Face / Apple and cached; inference never leaves the machine.
 - **Don't store raw audio or full transcripts by default.** Only behind an explicit diagnostics toggle.
 - **Don't request Microphone, Screen Recording, or Accessibility permissions for the MVP.** The app already declares `NSAudioCaptureUsageDescription`; sandbox entitlements ([`LiveSubtitleTranslator.entitlements`](LiveSubtitleTranslator/LiveSubtitleTranslator.entitlements)) include audio-input, network-client, and specific mach-lookup exceptions (`com.apple.audioanalyticsd`, `com.apple.dnssd.service`) plus a read-only path exception for `/Library/Preferences/com.apple.networkd.plist` that Core Audio / Apple Translation need under the sandbox. Don't broaden entitlements casually.
 - **Log latency timestamps at every stage** (capture, ASR partial, ASR final, translation final, render) via `MetricsRecorder` — these feed the diagnostics overlay and the benchmark plan in `project_docs/docs/07_BENCHMARK_AND_TEST_PLAN.md`.
