@@ -29,8 +29,8 @@ System audio  →  transcribe (English)  →  translate (→ Chinese)  →  on-s
 | **macOS** | 26.5 or later (uses Core Audio process taps + Apple Translation) |
 | **Mac** | Apple Silicon strongly recommended (ASR/translation run on the ANE/GPU) |
 | **Xcode** | A version whose SDK targets macOS 26.5 |
-| **Disk** | Up to several GB for cached on-device models (see [Models](#on-device-models)) |
-| **Network** | Needed *once* to download the selected model on first use; offline afterward |
+| **Disk** | Up to several GB for cached on-device models (see [Models](#on-device-models)); model weights are not included in this repo |
+| **Network** | Needed to download the selected models/assets from the Settings page before first real use; offline afterward |
 
 This is a **menu-bar agent** (`LSUIElement`): it has no Dock icon and no main
 window. After launch, look for its icon in the menu bar.
@@ -125,9 +125,13 @@ UI tests use XCTest in `LiveSubtitleTranslatorUITests`.
 ### First launch
 
 1. Run the app. Its icon appears in the **menu bar** (no Dock icon, no window).
-2. The **first time** you start live subtitles with a real backend, macOS prompts
-   for **system audio recording** permission, and the app downloads the selected
-   ASR/translation model. Subsequent launches are offline and instant.
+2. Open **Settings… ▸ Backends** and select/download the ASR and translation
+   models you want to use. Model weights are **not included** in the app or repo.
+   Local NLLB and Hunyuan-MT expose warm-up buttons in Settings; ASR and Apple
+   Translation assets download/prepare when the selected live path first starts.
+3. The **first time** you start live subtitles with a real backend, macOS prompts
+   for **system audio recording** permission. Subsequent launches are offline and
+   faster once models/assets are cached.
 
 ### Menu-bar controls
 
@@ -176,19 +180,27 @@ Switching backends takes effect at runtime — no restart required.
 
 ## On-device models
 
-The first time you select and run a backend, its model is downloaded and cached
-locally. These are **local-inference** models — only the weights are fetched, once.
+Model weights are **not bundled** with this repository or the app target. Before
+first real use, open **Settings… ▸ Backends** to choose the ASR and translation
+backends and download/warm up the required models. These are **local-inference**
+models — only the weights/assets are fetched and cached on your Mac.
 
 | Backend | Model | Source |
 |---|---|---|
 | Parakeet (default ASR) | `parakeet-tdt-0.6b-v3` (multilingual) / `-v2` (English) | FluidAudio |
 | WhisperKit | `tiny` / `large-v3` / `large-v3 turbo` | argmax / WhisperKit |
-| NLLB | NLLB-200 distilled, CoreML conversion | `cstr/nllb-200-coreml-128` (HF) |
+| NLLB | NLLB-200 distilled, CoreML conversion | [`cstr/nllb-200-coreml-128`](https://huggingface.co/cstr/nllb-200-coreml-128) (HF) |
 | Hunyuan-MT | Hy-MT2-1.8B (8-bit) | `mlx-community/Hy-MT2-1.8B-8bit` (HF) |
 | Apple Translation (default) | System translation assets | Apple |
 
 If a download or model load fails, the overlay shows a short status string and
 Settings keeps the detailed error.
+
+> **License notice:** The Meta/Facebook NLLB model family is published under a
+> Creative Commons Attribution-NonCommercial license (CC BY-NC 4.0), including
+> the upstream `facebook/nllb-200-*` models on Hugging Face. Treat the Local NLLB
+> backend as personal/non-commercial unless you have confirmed separate rights.
+> Always check the upstream model card/license for every model you download.
 
 ---
 
