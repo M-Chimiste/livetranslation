@@ -2572,6 +2572,110 @@ struct LiveSubtitleTranslatorTests {
 
     @MainActor
     @Test
+    func parakeetASRServiceCapsPendingAudioBacklog() async throws {
+        let transcriber = FakeParakeetTranscriber()
+        let service = ParakeetASRService(transcriber: transcriber)
+        try await service.configure(
+            ASRConfiguration(
+                sourceLanguage: "en",
+                latencyProfile: .fast,
+                modelID: LocalASRSettings.parakeetV3ModelID
+            )
+        )
+        try await service.start()
+
+        for _ in 0..<35 {
+            try await service.acceptAudioChunk(makeAudioChunk(rms: 0.02, duration: 1))
+        }
+
+        let maxSamples = Int(ParakeetASRService.maxPendingDuration * 16_000)
+        #expect(service.pendingSampleCount == maxSamples)
+    }
+
+    @MainActor
+    @Test
+    func whisperKitASRServiceCapsPendingAudioBacklog() async throws {
+        let transcriber = FakeWhisperKitTranscriber()
+        let service = WhisperKitASRService(transcriber: transcriber)
+        try await service.configure(
+            ASRConfiguration(
+                sourceLanguage: "en",
+                latencyProfile: .balanced,
+                modelID: LocalASRSettings.whisperLargeV3ModelID
+            )
+        )
+        try await service.start()
+
+        for _ in 0..<35 {
+            try await service.acceptAudioChunk(makeAudioChunk(rms: 0.02, duration: 1))
+        }
+
+        let maxSamples = Int(WhisperKitASRService.maxPendingDuration * 16_000)
+        #expect(service.pendingSampleCount == maxSamples)
+    }
+
+    @MainActor
+    @Test
+    func audioCaptureDiagnosticsCoalescesPendingFinalSegmentsWhenConsumerIsSlow() async {
+        let captureService = FakeAudioCaptureService()
+        let asrService = FakeASRService()
+        let model = AudioCaptureDiagnosticsModel(
+            captureService: captureService,
+            asrService: asrService
+        )
+        let first = makeTranscriptSegment("first", stability: .final)
+        let second = makeTranscriptSegment("second", stability: .final)
+        let third = makeTranscriptSegment("third", stability: .final)
+
+        var forwardedEvents: [ASREvent] = []
+        var gate: CheckedContinuation<Void, Never>?
+        model.asrEventSink = { event in
+            forwardedEvents.append(event)
+            if forwardedEvents.count == 1 {
+                await withCheckedContinuation { gate = $0 }
+            }
+        }
+
+        await model.startCapture(
+            audioSourceOption: .systemOutput,
+            asrBackend: .localParakeet
+        )
+
+        asrService.emit(.final(first))
+        for _ in 0..<40 where forwardedEvents.isEmpty {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(forwardedEvents == [.final(first)])
+
+        // While the sink is blocked on the first event, newer final segments
+        // must coalesce into one merged segment instead of queueing behind it.
+        asrService.emit(.final(second))
+        asrService.emit(.final(third))
+        for _ in 0..<40 where model.state.asrDiagnostics.completedTranscriptCount != 3 {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        gate?.resume()
+        for _ in 0..<40 where forwardedEvents.count < 2 {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(forwardedEvents.count == 2)
+        #expect(forwardedEvents.first == .final(first))
+        if case let .final(merged) = forwardedEvents.last {
+            #expect(merged.text == "second third")
+            #expect(merged.startTime == second.startTime)
+            #expect(merged.endTime == third.endTime)
+            #expect(merged.stability == .final)
+        } else {
+            Issue.record("Expected a merged final segment")
+        }
+
+        await model.stopCapture()
+    }
+
+    @MainActor
+    @Test
     func whisperKitASRServiceLoadsSelectedWhisperModelAndFlushesTranscript() async throws {
         let transcriber = FakeWhisperKitTranscriber()
         let service = WhisperKitASRService(transcriber: transcriber)

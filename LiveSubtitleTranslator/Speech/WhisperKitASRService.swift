@@ -94,6 +94,11 @@ final class WhisperKitASRService: ASRService {
         }
     }
 
+    /// Bound on audio buffered between flushes. If flushes stall or fall behind
+    /// real time, keep only the most recent window — otherwise each flush gets
+    /// bigger, takes longer, and the backlog snowballs for the rest of the session.
+    static let maxPendingDuration: TimeInterval = 30
+
     private let transcriber: WhisperKitTranscribing
     private var eventStream = EventStream.make()
     private var shouldRenewEventStreamOnStart = false
@@ -145,6 +150,19 @@ final class WhisperKitASRService: ASRService {
 
         pendingSamples.append(contentsOf: chunk.samples)
         pendingDuration += chunk.duration
+        dropOldestPendingAudioBeyondLimit(measuredOn: chunk)
+    }
+
+    private func dropOldestPendingAudioBeyondLimit(measuredOn chunk: AudioChunk) {
+        let overflowDuration = pendingDuration - Self.maxPendingDuration
+        guard overflowDuration > 0, chunk.duration > 0 else { return }
+
+        let framesPerSecond = Double(chunk.samples.count) / chunk.duration
+        let framesToDrop = min(pendingSamples.count, Int(overflowDuration * framesPerSecond))
+        guard framesToDrop > 0 else { return }
+
+        pendingSamples.removeFirst(framesToDrop)
+        pendingDuration -= Double(framesToDrop) / framesPerSecond
     }
 
     func flush() async throws {

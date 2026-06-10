@@ -98,8 +98,10 @@ actor LiveHunyuanEngine: HunyuanEngine {
     /// MLX parks freed Metal buffers in a process-wide cache that is unbounded by
     /// default. Every decode step concatenates a new-shaped KV buffer, so a long
     /// live session accumulates wired GPU memory until the whole system starves
-    /// (frozen video in other apps). Cap the cache so sessions stay flat.
-    private static let gpuCacheLimitBytes = 128 * 1024 * 1024
+    /// (frozen video in other apps). Cap the cache so sessions stay flat — but
+    /// keep headroom above the largest single-call transient (prefill logits are
+    /// tens of MB) so the steady-state decode loop never bypasses the cache.
+    private static let gpuCacheLimitBytes = 256 * 1024 * 1024
 
     private var tokenizer: (any Tokenizer)?
     private var model: HunyuanForCausalLM?

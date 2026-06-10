@@ -125,7 +125,21 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
     private var preprocessingDiagnosticsTask: Task<Void, Never>?
     private var speechActivityTask: Task<Void, Never>?
     private var voiceActivityDiagnosticsTask: Task<Void, Never>?
+    /// Upper bound on final segments coalesced into one sink event (~3 s of
+    /// speech each). Beyond this the oldest are dropped: an overloaded pipeline
+    /// must stay bounded, and the overlay can't display that much text anyway.
+    private static let maxPendingSinkSegments = 4
+
     private var asrEventTask: Task<Void, Never>?
+    /// Final segments that arrived while the sink (e.g. translation) was busy.
+    /// They are coalesced into a single merged segment when the sink frees up,
+    /// so a slow translation skips no content yet never builds a queue — one
+    /// translation call catches the subtitle up to the speaker.
+    private var pendingFinalSinkSegments: [TranscriptSegment] = []
+    /// Newest non-final event (partial/error) awaiting the sink; latest wins.
+    private var pendingOtherSinkEvent: ASREvent?
+    private var isForwardingEventToSink = false
+    private var isFlushingASR = false
     private var serviceEmittedChunkCount: Int?
     private var serviceVoiceActivityDiagnosticsSeen = false
     private var shouldRouteAudioToASR = false
@@ -541,11 +555,78 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
                     self.state.asrDiagnostics.lastErrorMessage = message
                 }
 
-                if let sink = self.asrEventSink {
-                    await sink(event)
-                }
+                self.forwardEventToSink(event)
             }
         }
+    }
+
+    private func forwardEventToSink(_ event: ASREvent) {
+        guard asrEventSink != nil else { return }
+
+        if isForwardingEventToSink {
+            bufferPendingSinkEvent(event)
+            return
+        }
+
+        isForwardingEventToSink = true
+        Task { @MainActor [weak self] in
+            var next: ASREvent? = event
+            while let current = next {
+                guard let self, let sink = self.asrEventSink else { break }
+                await sink(current)
+                next = self.dequeuePendingSinkEvent()
+            }
+            self?.clearPendingSinkEvents()
+            self?.isForwardingEventToSink = false
+        }
+    }
+
+    private func bufferPendingSinkEvent(_ event: ASREvent) {
+        switch event {
+        case let .final(segment):
+            pendingFinalSinkSegments.append(segment)
+            if pendingFinalSinkSegments.count > Self.maxPendingSinkSegments {
+                pendingFinalSinkSegments.removeFirst(
+                    pendingFinalSinkSegments.count - Self.maxPendingSinkSegments
+                )
+            }
+        case .partial, .error:
+            pendingOtherSinkEvent = event
+        }
+    }
+
+    private func dequeuePendingSinkEvent() -> ASREvent? {
+        if !pendingFinalSinkSegments.isEmpty {
+            let merged = Self.mergedFinalSegment(pendingFinalSinkSegments)
+            pendingFinalSinkSegments.removeAll()
+            return .final(merged)
+        }
+
+        if let other = pendingOtherSinkEvent {
+            pendingOtherSinkEvent = nil
+            return other
+        }
+
+        return nil
+    }
+
+    private func clearPendingSinkEvents() {
+        pendingFinalSinkSegments.removeAll()
+        pendingOtherSinkEvent = nil
+    }
+
+    private static func mergedFinalSegment(_ segments: [TranscriptSegment]) -> TranscriptSegment {
+        guard segments.count > 1, let first = segments.first, let last = segments.last else {
+            return segments[0]
+        }
+
+        return TranscriptSegment(
+            sourceLanguage: first.sourceLanguage,
+            text: segments.map(\.text).joined(separator: " "),
+            startTime: first.startTime,
+            endTime: last.endTime,
+            stability: .final
+        )
     }
 
     private func routeAudioChunkToASRIfNeeded(
@@ -590,6 +671,14 @@ final class AudioCaptureDiagnosticsModel: ObservableObject {
               shouldRouteAudioToASR
         else { return }
         guard pendingASRDuration > 0 else { return }
+
+        // Never run flushes concurrently: if transcription is slower than the
+        // flush cadence, overlapping flushes compound the slowdown. Skipped
+        // triggers retry on the next chunk; the ASR services cap their own
+        // pending-audio backlog meanwhile.
+        guard !isFlushingASR else { return }
+        isFlushingASR = true
+        defer { isFlushingASR = false }
 
         state.asrDiagnostics.lifecycleState = .transcribing
 
