@@ -8,7 +8,7 @@ The first real use case is personal viewing of English-language video when Chine
 
 ## Current Repo State
 
-This repository is currently a native macOS menu bar app with the Phase 1 subtitle overlay MVP, Phase 2 mock pipeline skeleton, Phase 3 audio permission/status plumbing, Phase 4 Core Audio capture proof of life, Phase 5 audio preprocessing chunks, Phase 6 simple energy VAD/chunker, Phase 7 local ASR diagnostics, Phase 8 live ASR to overlay routing, Phase 9 Apple Translation backend, post-Task 013 live E2E startup/capture-lifecycle fixes, and later local backend expansion implemented. Task 014 latency metrics and diagnostics display/export is still the next focused pass.
+This repository is currently a native macOS menu bar app with the Phase 1 subtitle overlay MVP, Phase 2 mock pipeline skeleton, Phase 3 audio permission/status plumbing, Phase 4 Core Audio capture proof of life, Phase 5 audio preprocessing chunks, Phase 6 simple energy VAD/chunker, Phase 7 local WhisperKit ASR diagnostics, Phase 8 live ASR to overlay routing, Phase 9 Apple Translation backend, and post-Task 013 live E2E startup/capture-lifecycle fixes implemented:
 
 - App target: `LiveSubtitleTranslator`
 - Tests: `LiveSubtitleTranslatorTests` using Swift Testing
@@ -20,21 +20,19 @@ This repository is currently a native macOS menu bar app with the Phase 1 subtit
 - The Phase 1 mock Chinese subtitle ticker remains available as a utility/test artifact.
 - Overlay visibility, lock/unlock, reset, drag/resize edit mode, and persisted frame/lock state are implemented.
 - Live startup can show non-subtitle overlay status/error text before the first translated subtitle arrives.
-- Core service protocols, deterministic mock ASR/translation services, subtitle stabilization/wrapping utilities, and a minimal in-memory `MetricsRecorder` are implemented.
+- Core service protocols, deterministic mock ASR/translation services, subtitle stabilization/wrapping utilities, and in-memory metrics recording are implemented.
 - Generated Info.plist settings include the system audio capture usage description.
 - The app remains sandboxed and declares Core Audio input access, outbound client networking, mach lookup exceptions for `com.apple.audioanalyticsd` and `com.apple.dnssd.service`, and read-only access to `/Library/Preferences/com.apple.networkd.plist` for the current capture/model setup paths.
 - Audio Capture permission is checked/requested with the TCC-backed system audio recording provider used by Core Audio process taps. Denied users are pointed to System Settings privacy recovery.
 - Settings can refresh audio sources, start/stop system-output capture, and show permission, capture state, source count, last error, RMS, peak, Core Audio callback/captured-frame counters, emitted chunk count, last chunk duration, queue depth, dropped frames, VAD diagnostics, ASR diagnostics, and live pipeline forwarding/translation diagnostics.
 - `ProcessTapAudioCaptureService` creates a private Core Audio process tap and aggregate device for system-output proof of life, writes callback samples into `AudioRingBuffer`, emits diagnostics-only continuous 16 kHz mono Float32 `AudioChunk` values through a background preprocessing task, and emits separate speech activity/VAD diagnostics.
-- `ParakeetASRService` is the default local ASR backend, using FluidAudio/CoreML and Parakeet TDT 0.6b. `WhisperKitASRService` remains available as an alternate local backend. `MockASRService` remains available for tests and scaffolding.
-- The live path routes continuous 16 kHz mono chunks to the selected local ASR backend; VAD remains visible as diagnostics and can trigger early flushes, but it is not the primary ASR audio filter.
-- `TranslationRouterService` chooses among `AppleTranslationService`, `NLLBTranslationService`, `HunyuanMTTranslationService`, and `MockTranslationService`. Apple Translation is the default user-facing backend; Local NLLB and Local Hunyuan-MT are selectable local alternatives; Remote LAN translation is still not implemented.
-- Settings include Parakeet and WhisperKit model selectors, Apple Translation language availability, local NLLB/Hunyuan warm-up controls, an overlay background opacity slider, and the live subtitle/capture diagnostics listed above.
-- First-run live E2E may require internet access so the selected local ASR/translation model and Apple Translation language assets can download/cache. These are local model/asset downloads, not public cloud inference.
+- `WhisperKitASRService` is implemented behind `ASRService`; the live path routes continuous 16 kHz mono chunks to WhisperKit, while VAD remains visible as diagnostics and can trigger early flushes.
+- `AppleTranslationService` is implemented behind `TranslationService`; Remote LAN translation is still not implemented.
+- First-run live E2E may require internet access so WhisperKit can download/cache the selected model and Apple Translation can prepare/download language assets.
 - Generated Info.plist settings are currently managed through the Xcode project (`GENERATE_INFOPLIST_FILE = YES`).
 - Main project documentation lives under `project_docs/`.
 
-Treat this root `AGENTS.md` as the active repo-level guide. `project_docs/project_status.md` remains the broad implementation handoff, but this file is newer for backend/default details if the two disagree. Treat the rest of `project_docs/` as the product and architecture source of truth.
+Treat `project_docs/project_status.md` as the current implementation handoff, and treat the rest of `project_docs/` as the product and architecture source of truth.
 
 ## Read These Before Coding
 
@@ -67,13 +65,12 @@ Build in small, working phases. Do not try to implement the full product in one 
 6. Add Core Audio process tap proof of life with RMS/peak diagnostics. Complete.
 7. Add ring buffer, resampler, and 16 kHz mono chunking. Complete.
 8. Add simple energy VAD/chunker. Complete.
-9. Integrate local ASR. Complete: Parakeet is the default local ASR backend, and WhisperKit remains selectable.
+9. Integrate local ASR, preferably WhisperKit / Argmax OSS. Complete.
 10. Wire local ASR to mock translation and overlay. Complete.
 11. Add Apple Translation or an explicitly selected fallback. Complete.
 12. Fix live E2E startup, capture lifecycle, permission recovery, and primary live-subtitle UI. Complete.
-13. Add local backend alternatives. In-tree now: Local NLLB and Local Hunyuan-MT translation backends, with warm-up/status UI.
-14. Add latency metrics and diagnostics display/export. Next.
-15. Add optional LAN inference only after local overlay + capture paths work.
+13. Add latency metrics and diagnostics display/export. Next.
+14. Add optional LAN inference only after local overlay + capture paths work.
 
 ## Architecture Principles
 
@@ -85,21 +82,6 @@ Build in small, working phases. Do not try to implement the full product in one 
 - Keep UI updates on the main actor.
 - Use dependency injection so tests can exercise the pipeline with mocks.
 - Prefer small services with clear protocols over large view models.
-- Use `AppState` as the composition root. Wire new concrete services there and keep `SubtitleCoordinator` pointed at `TranslationRouterService`, not directly at a concrete translation backend.
-- Preserve backward-compatible decoding in `AppSettings` when adding or renaming persisted settings; the tests pin legacy settings behavior.
-
-## Current Module Layout
-
-- `LiveSubtitleTranslator/App`: `LiveSubtitleTranslatorApp`, `AppState`, `MenuBarContentView`, `LiveSubtitleSessionController`, `MockPipelineController`, and `PipelineState`.
-- `LiveSubtitleTranslator/AudioCapture`: `AudioCaptureService`, `ProcessTapAudioCaptureService`, `AudioRingBuffer`, `AudioResampler`, `AudioChunkAssembler`, `VoiceActivity`, `AudioLevel`, `AudioPreprocessingDiagnostics`, and `AudioCaptureError`. Fake audio capture lives in the test target, not a production `MockAudioCaptureService` file.
-- `LiveSubtitleTranslator/Speech`: `ASRService`, `ParakeetASRService`, `ParakeetModelCatalog`, `WhisperKitASRService`, and `MockASRService`.
-- `LiveSubtitleTranslator/Translation`: `TranslationService`, `TranslationRouterService`, `AppleTranslationService`, `AppleTranslationLanguageCatalog`, `NLLBTranslationService`, `NLLBTokenization`, `HunyuanMTTranslationService`, `HunyuanMTModel`, and `MockTranslationService`.
-- `LiveSubtitleTranslator/Subtitles`: `SubtitleCoordinator`, `SubtitleDisplayModel`, `SubtitleDisplayState`, `SubtitleLineWrapper`, `SubtitleStabilizer`, and `MockSubtitleTicker`.
-- `LiveSubtitleTranslator/Overlay`: `SubtitleOverlayWindowController` and `SubtitleOverlayView`.
-- `LiveSubtitleTranslator/Settings`: `AppSettings`, `SettingsStore`, and `SettingsView`.
-- `LiveSubtitleTranslator/Diagnostics`: `AudioCaptureDiagnosticsModel`, `AudioCapturePermissionProvider`, `ASRDiagnostics`, and `MetricsRecorder`.
-
-Swift package dependencies resolved through Xcode include FluidAudio, argmax-oss-swift/WhisperKit, swift-transformers/Hub/Tokenizers, and mlx-swift.
 
 ## Audio Rules
 
@@ -113,7 +95,7 @@ Core Audio callbacks must stay minimal:
 
 Do not allocate heavily, run inference, call SwiftUI/AppKit, perform chatty logging, or `await` inside audio callbacks.
 
-Captured audio should become timestamped 16 kHz mono Float32 chunks before ASR. Use `AVAudioConverter` for resampling and mixdown where practical. In the current live path, continuous chunks feed the selected local ASR backend; VAD is a diagnostics and early-flush signal, not the primary audio filter.
+Captured audio should become timestamped 16 kHz mono Float32 chunks before ASR. Use `AVAudioConverter` for resampling and mixdown where practical. In the current live path, continuous chunks feed WhisperKit; VAD is a diagnostics and early-flush signal, not the primary audio filter.
 
 ## Overlay Rules
 
@@ -133,7 +115,6 @@ Keep mock subtitle and status-display paths available for tests and recovery sta
 
 - Default to on-device or local-network processing.
 - Do not require or introduce public cloud APIs for the default path.
-- Downloading local model weights/assets from Hugging Face or Apple on first run is allowed for the current local backends; do not add public cloud inference APIs unless the user explicitly changes the product boundary.
 - Do not store raw audio by default.
 - Keep logs local and make diagnostics logging user-controlled.
 - Do not request microphone permission for the MVP.
@@ -147,11 +128,9 @@ Keep mock subtitle and status-display paths available for tests and recovery sta
 
 Persist:
 
-- Overlay frame, lock state, and currently implemented overlay style values such as background opacity.
-- Target language: Simplified Chinese by default, with Traditional Chinese supported where the selected backend supports it.
-- Source language.
+- Overlay frame and style.
+- Target language: Simplified Chinese first, Traditional Chinese later.
 - ASR backend.
-- Local ASR model selections for Parakeet and WhisperKit.
 - Translation backend.
 - Remote server URL, if used.
 - Latency profile.
@@ -165,7 +144,6 @@ Diagnostics should make failures and latency visible:
 - End-to-end latency.
 - Backend and model names.
 - Optional JSONL logs when diagnostics are enabled.
-- Local model download/load/warm-up state for ASR and translation backends.
 
 Do not write raw audio or full transcripts unless the user explicitly enables a diagnostic mode for that.
 
@@ -180,9 +158,8 @@ Use focused tests as modules appear:
 - Translation context windows.
 - Remote message encoding/decoding.
 - Audio chunk timing math.
-- Local backend seams such as fake Parakeet/WhisperKit transcribers, fake Apple Translation clients, and pure NLLB/Hunyuan tokenization or language helpers.
 
-Keep model, audio-permission, and LAN-server work testable through mocks or small deterministic seams. Gated integration tests that download large local models must stay opt-in. UI tests can stay light until there is stable UI surface worth automating.
+Keep model, audio-permission, and LAN-server work testable through mocks. UI tests can stay light until there is stable UI surface worth automating.
 
 ## Build and Test Commands
 
@@ -206,6 +183,6 @@ If signing or destination selection becomes noisy in automation, keep the projec
 
 ## Immediate Next Task
 
-The implementation has completed Task 001, Task 002, Task 003, Task 004, Task 005, Task 007, Task 008, Task 009, Task 010, Task 011, Task 012, and Task 013 from `project_docs/docs/05_CODEX_TASK_BACKLOG.md`, plus post-Task 013 live E2E startup, capture-lifecycle, live-UI cleanup fixes, Parakeet default ASR, Local NLLB translation, and Local Hunyuan-MT translation. Task 006 is partially complete for the line wrapping utility, tests, and background opacity; fuller configurable overlay style settings remain future work.
+The implementation has completed Task 001, Task 002, Task 003, Task 004, Task 005, Task 007, Task 008, Task 009, Task 010, Task 011, Task 012, and Task 013 from `project_docs/docs/05_CODEX_TASK_BACKLOG.md`, plus post-Task 013 live E2E startup, capture-lifecycle, and live-UI cleanup fixes. Task 006 is partially complete for the line wrapping utility and tests; configurable overlay style settings remain future work.
 
 The next coding pass should begin Task 014: add latency metrics and diagnostics display/export. Keep LAN networking, raw audio persistence, and model benchmarking out of that pass unless a new plan explicitly expands scope.

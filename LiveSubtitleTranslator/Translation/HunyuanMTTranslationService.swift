@@ -95,6 +95,12 @@ actor LiveHunyuanEngine: HunyuanEngine {
     private static let repoID = "mlx-community/Hy-MT2-1.8B-8bit"
     private static let maxGeneratedTokens = 128
 
+    /// MLX parks freed Metal buffers in a process-wide cache that is unbounded by
+    /// default. Every decode step concatenates a new-shaped KV buffer, so a long
+    /// live session accumulates wired GPU memory until the whole system starves
+    /// (frozen video in other apps). Cap the cache so sessions stay flat.
+    private static let gpuCacheLimitBytes = 128 * 1024 * 1024
+
     private var tokenizer: (any Tokenizer)?
     private var model: HunyuanForCausalLM?
 
@@ -125,6 +131,8 @@ actor LiveHunyuanEngine: HunyuanEngine {
 
     func prepare() async throws {
         guard tokenizer == nil || model == nil else { return }
+
+        GPU.set(cacheLimit: Self.gpuCacheLimitBytes)
 
         let downloadBase = try Self.modelCacheDirectory()
         let hub = HubApi(downloadBase: downloadBase)
